@@ -37,7 +37,10 @@
 
   SimController.prototype.buildEngine = function () {
     const vs = this.vrStore;
-    const backend = vs ? { get: (i) => vs.getVR(i), set: (i, v) => vs.setVR(i, v) } : null;
+    // Change-detecting backend: only notify vrStore subscribers (HMI bindings)
+    // when a VR actually changes, so thousands of scan writes/sec don't flood
+    // the HMI renderer with no-op updates.
+    const backend = vs ? { get: (i) => vs.getVR(i), set: (i, v) => { if (vs.getVR(i) !== v) vs.setVR(i, v); } } : null;
     this.machine = new TrioMachine({ vrBackend: backend });
     this.plant = new TrioPlant(this.machine, {});
     this.rt = new TrioRuntime(this.machine, { onLog: null });
@@ -94,6 +97,29 @@
     if (autorun) this.autorun = autorun;
     this.loadReport = { count, errFiles, source: 'user files' };
     return this.loadReport;
+  };
+
+  // Fetch a bundled file and wrap it as a File for the visualizer's loader.
+  SimController.prototype.fetchAsFile = async function (url, name, type) {
+    const blob = await fetch(url).then(r => r.blob());
+    return new File([blob], name, { type: type });
+  };
+
+  // Load the bundled HMI screens (TGM + TGDs + images) into the visualizer app
+  // so they render (and animate from vrStore) in View mode.
+  SimController.prototype.loadHmiScreens = async function (base) {
+    base = base || 'samples/line2-hmi/';
+    const man = await fetch(base + 'LINE2_HMI.TGM').then(r => r.text());
+    const pages = Array.from(man.matchAll(/<Page File="([^"]+)"/g)).map(m => m[1]);
+    const imgs = Array.from(man.matchAll(/<Image File="([^"]+)"/g)).map(m => m[1]);
+    const enc = (n) => base + n.replace(/ /g, '%20');
+    const files = [];
+    files.push(await this.fetchAsFile(enc('LINE2_HMI.TGM'), 'LINE2_HMI.TGM', 'text/xml'));
+    for (const p of pages) { try { files.push(await this.fetchAsFile(enc(p), p, 'text/xml')); } catch (e) { } }
+    for (const im of imgs) { try { files.push(await this.fetchAsFile(enc(im), im, 'image/png')); } catch (e) { } }
+    if (typeof app !== 'undefined' && app.loadFiles) await app.loadFiles(files);
+    this.hmiLoaded = true;
+    return { pages: pages.length, images: imgs.length };
   };
 
   SimController.prototype.boot = function () {

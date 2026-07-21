@@ -49,6 +49,7 @@
         <span class="sb-stat">Mode <b id="sim-mode" class="chip">?</b></span>
         <span class="sb-stat" id="sim-boot-state">not booted</span>
         <span class="sb-stat" id="sim-load" style="margin-left:auto;color:#888;"></span>
+        <button id="sim-hmi" class="sb">🖥 Live HMI</button>
         <label for="sim-file" class="sb">Load .BAS…</label>
         <input type="file" id="sim-file" multiple accept=".bas,.BAS,.mpv3prj" style="display:none">
       </div>
@@ -57,11 +58,13 @@
         <div class="sim-col">
           <div class="sim-card"><h4>Operator Controls</h4><div id="sim-ops"></div></div>
           <div class="sim-card"><h4>Fault Injection</h4><div id="sim-faults"></div></div>
+          <div class="sim-card"><h4>Regression Scenarios <button id="sim-run-all" class="sb" style="font-size:10px;padding:2px 8px;">▶ Run all</button></h4><div id="sim-scenarios"></div></div>
           <div class="sim-card"><h4>Trend</h4><canvas id="sim-trend" width="360" height="140"></canvas><div id="sim-trend-key"></div></div>
         </div>
         <div class="sim-col">
           <div class="sim-card"><h4>Processes</h4><div id="sim-procs" class="sim-table"></div></div>
           <div class="sim-card"><h4>Axes</h4><div id="sim-axes" class="sim-table"></div></div>
+          <div class="sim-card"><h4>Motors &amp; VFDs — expected vs actual</h4><div id="sim-motors" class="sim-table"></div></div>
           <div class="sim-card"><h4>Heater Zones</h4><div id="sim-heat"></div></div>
           <div class="sim-card"><h4>Pump Flow</h4><div id="sim-flow" class="sim-table"></div></div>
         </div>
@@ -116,6 +119,7 @@
   SimUI.prototype.buildStatic = function () {
     this.buildOps();
     this.buildFaults();
+    this.buildScenarios();
     this.buildIO();
     this.setBootState();
     const lr = this.sim.loadReport;
@@ -178,6 +182,24 @@
     heat('Overhead Z2', 'overhead_zone2_on', 'overhead_zone2_offon_sp');
     heat('Overhead Z3', 'overhead_zone3_on', 'overhead_zone3_offon_sp');
     heat('Mixer Head', 'mixer_head_on', 'mixer_head_offon_sp');
+    // Nip roll (Optidrive control word run bit 0); seed the Hz scale so the
+    // speed-word math is well-defined.
+    if ((sim.getG('niproll_inch_per_min_hz') || 0) === 0) sim.setG('niproll_inch_per_min_hz', 1);
+    const bitOf = (name, bit) => ((Math.floor(sim.getG(name) || 0) >> bit) & 1);
+    toggle('Nip Roll RUN', () => bitOf('nip_roll_control_word', 0), (v) => sim.setGbit('nip_roll_control_word', 0, v ? 1 : 0));
+    num('Nip speed (in/min)', 'nip_speed_setpt', 30);
+    // Mixer motor (control word bit 4). Lube count 0 => motor runs without a
+    // lube sequence unless the operator configures shot counts.
+    toggle('Mixer RUN', () => bitOf('mixer_controlword_vr', 4), (v) => sim.setGbit('mixer_controlword_vr', 4, v ? 1 : 0));
+    num('Mixer speed (rpm)', 'mixer_head_speed_sp', 8000);
+    // Traverse: momentary Home (manual mode), Auto-run enable, material window.
+    const homeBtn = el('button', 'fault-btn', '⌂ Home Traverse (manual)');
+    homeBtn.onclick = () => sim.setGbit('traverse_controlword_vr', 5, 1);
+    host.appendChild(homeBtn);
+    toggle('Traverse AUTO run', () => bitOf('traverse_controlword_vr', 3), (v) => sim.setGbit('traverse_controlword_vr', 3, v ? 1 : 0));
+    num('Traverse speed (in/s)', 'traverse_speed_setpt', 30);
+    num('Material start (in)', 'material_start_pos', 10);
+    num('Material end (in)', 'material_end_pos', 90);
   };
 
   SimUI.prototype.buildFaults = function () {
@@ -192,6 +214,36 @@
     btn('Safety-Relay Reset', '', () => sim.setG('safety_relay_reset', 1));
     const ec = btn('Drop EtherCAT', '', () => { const on = !sim.machine.faults.ethercatDrop; sim.machine.setFault('ethercatDrop', on); ec.classList.toggle('active', on); ec.textContent = on ? 'Restore EtherCAT' : 'Drop EtherCAT'; });
     const mc = btn('Meter Comms Loss', '', () => { const on = !sim.machine.faults.meterCommsLoss; sim.machine.setFault('meterCommsLoss', on); mc.classList.toggle('active', on); mc.textContent = on ? 'Restore Meters' : 'Meter Comms Loss'; });
+  };
+
+  SimUI.prototype.buildScenarios = function () {
+    const host = this.rootEl.querySelector('#sim-scenarios'); host.innerHTML = '';
+    if (!root.SimScenarios) { host.textContent = 'harness unavailable'; return; }
+    this._scnRows = [];
+    SimScenarios.BUILTINS.forEach((scn, i) => {
+      const row = el('div', 'scn-row');
+      const b = el('button', 'scn-run', '▶'); b.title = 'Run scenario';
+      const name = el('span', 'scn-name', scn.name);
+      const res = el('span', 'scn-res', '·');
+      b.onclick = () => this.runScn(i);
+      row.appendChild(b); row.appendChild(name); row.appendChild(res);
+      host.appendChild(row);
+      this._scnRows.push({ res, name });
+    });
+    const all = this.rootEl.querySelector('#sim-run-all');
+    if (all) all.onclick = async () => { for (let i = 0; i < SimScenarios.BUILTINS.length; i++) await this.runScn(i); };
+  };
+
+  SimUI.prototype.runScn = async function (i) {
+    const scn = SimScenarios.BUILTINS[i], row = this._scnRows[i];
+    row.res.textContent = '…'; row.res.className = 'scn-res';
+    const yieldFn = () => new Promise(r => requestAnimationFrame(r));
+    const r = await SimScenarios.runScenario(this.sim, scn, { yield: yieldFn });
+    row.res.textContent = (r.failed ? '✗ ' : '✓ ') + r.passed + '/' + r.total;
+    row.res.className = 'scn-res ' + (r.failed ? 'bad' : 'ok');
+    row.res.title = r.results.filter(x => !x.ok).map(x => `${x.what} ${x.op} ${x.value} got ${typeof x.actual === 'number' ? x.actual.toFixed(2) : x.actual}`).join('\n') || 'all assertions passed';
+    this.refresh(true);
+    return r;
   };
 
   SimUI.prototype.buildIO = function () {
@@ -235,7 +287,7 @@
     if (this._numInputs) for (const ni of this._numInputs) {
       if (document.activeElement !== ni.inp) { const v = sim.getG(ni.name); if (v != null) ni.inp.value = fmt(v); }
     }
-    this.renderProcs(); this.renderAxes(); this.renderHeat(); this.renderFlow();
+    this.renderProcs(); this.renderAxes(); this.renderMotors(); this.renderHeat(); this.renderFlow();
     this.renderIO(); this.renderAnalog(); this.renderVR(force); this.renderLog();
     this.pushTrend(); this.drawTrend();
   };
@@ -256,6 +308,24 @@
       const moving = mt !== 0;
       html += `<div class="tr"><span>${a.name}</span><span class="${moving ? 'mv' : ''}">${MTYPE_NAME[mt] || mt}</span><span>${ms.toFixed(1)}</span><span>${mp.toFixed(2)}</span><span>${sv ? '●' : '○'}</span></div>`;
     }
+    host.innerHTML = html;
+  };
+
+  SimUI.prototype.renderMotors = function () {
+    const m = this.sim.machine, host = this.rootEl.querySelector('#sim-motors');
+    const d = this.sim.plant.getDrives();
+    const g = (n) => this.sim.getG(n) || 0;
+    let html = '<div class="tr th"><span>motor</span><span>expected</span><span>actual</span><span>unit</span></div>';
+    const row = (nm, cmd, act, unit, hot) => `<div class="tr"><span>${nm}</span><span>${cmd}</span><span class="${hot ? 'mv' : ''}">${act}</span><span>${unit}</span></div>`;
+    html += row('Traverse', m.getAxisParam(0, 'SPEED').toFixed(1), m.getAxisParam(0, 'MSPEED').toFixed(1), 'in/s', m.getAxisParam(0, 'MTYPE') !== 0);
+    html += row('Pump A', m.getAxisParam(1, 'SPEED').toFixed(1), m.getAxisParam(1, 'MSPEED').toFixed(1), 'rpm', m.getAxisParam(1, 'MTYPE') !== 0);
+    html += row('Pump B', m.getAxisParam(2, 'SPEED').toFixed(1), m.getAxisParam(2, 'MSPEED').toFixed(1), 'rpm', m.getAxisParam(2, 'MTYPE') !== 0);
+    html += row('Pump C', m.getAxisParam(3, 'SPEED').toFixed(1), m.getAxisParam(3, 'MSPEED').toFixed(1), 'rpm', m.getAxisParam(3, 'MTYPE') !== 0);
+    html += row('Nip Roll', g('nip_speed_setpt').toFixed(1), d.nip.speed.toFixed(1), 'in/min', d.nip.running);
+    html += row('Mixer spindle', d.mixer.cmdRpm.toFixed(0), d.mixer.rpm.toFixed(0), 'rpm', d.mixer.running);
+    // VFD I/O detail
+    html += `<div class="tr" style="color:#94e2d5"><span>Mixer VFD</span><span>AOUT6→${d.mixer.aoutDac.toFixed(0)}</span><span>AIN8←${d.mixer.ainDac.toFixed(0)}</span><span>fb ${Math.round(g('mixer_reference_speed'))}rpm</span></div>`;
+    html += `<div class="tr" style="color:#94e2d5"><span>Nip Optidrive</span><span>ref ${Math.round(g('nip_roll_speed_word'))}</span><span>ctl 0x${d.nip.ctrl.toString(16)}</span><span>st 0x${d.nip.status.toString(16)}</span></div>`;
     host.innerHTML = html;
   };
 
@@ -365,39 +435,73 @@
     // Add a Simulate toggle button to the toolbar.
     const toolbar = document.getElementById('toolbar');
     const btn = el('button', 'mode-btn', '◉ Simulator'); btn.id = 'btn-sim';
-    const sep = el('div', 'separator');
-    toolbar.appendChild(sep); toolbar.appendChild(btn);
+    toolbar.appendChild(el('div', 'separator')); toolbar.appendChild(btn);
 
-    // Mount hidden overlay.
     const mainWrap = document.getElementById('main');
     ui.mount(document.body);
     ui.rootEl.style.display = 'none';
 
+    // Floating mini control bar — lets you run/pause the engine and jump back to
+    // the dashboard while you're viewing and clicking the live HMI screens.
+    const minibar = el('div'); minibar.id = 'sim-minibar'; minibar.style.display = 'none';
+    minibar.innerHTML = `<b>SIM</b><button id="mb-run" class="sb">▶</button>
+      <span class="sb-stat">t=<b id="mb-clock">0.0</b>s</span><span id="mb-wdog" class="chip">?</span>
+      <select id="mb-speed"><option value="1">1×</option><option value="5">5×</option><option value="20" selected>20×</option><option value="100">100×</option></select>
+      <button id="mb-dash" class="sb">◧ Dashboard</button>`;
+    document.body.appendChild(minibar);
+
     let active = false;
+    const updateMinibar = () => {
+      if (minibar.style.display === 'none') return;
+      minibar.querySelector('#mb-clock').textContent = (sim.rt.simTime / 1000).toFixed(1);
+      const wd = sim.machine.getWdog();
+      const w = minibar.querySelector('#mb-wdog'); w.textContent = 'WDOG ' + (wd ? 'ON' : 'OFF'); w.className = 'chip ' + (wd ? 'ok' : 'bad');
+      minibar.querySelector('#mb-run').textContent = sim.running ? '⏸' : '▶';
+    };
+    const showMinibar = () => { minibar.style.display = (sim.booted && !active) ? 'flex' : 'none'; updateMinibar(); };
     const setActive = (on) => {
       active = on;
       ui.rootEl.style.display = on ? 'flex' : 'none';
       mainWrap.style.display = on ? 'none' : 'flex';
       btn.classList.toggle('active', on);
-      document.querySelectorAll('#toolbar .mode-btn[data-mode]').forEach(b => b.classList.toggle('active', false));
+      if (on) document.querySelectorAll('#toolbar .mode-btn[data-mode]').forEach(b => b.classList.remove('active'));
+      showMinibar();
+      // When revealing the HMI/View, recompute the canvas fit — it may have been
+      // computed while #main was hidden (zero width -> bad/negative zoom).
+      if (!on && typeof app !== 'undefined') {
+        requestAnimationFrame(() => { if (app.zoomFit) app.zoomFit(); else if (app.updateCanvasScale) app.updateCanvasScale(); });
+      }
     };
-    btn.onclick = async () => {
-      if (!active) {
-        if (Object.keys(sim.programs).length === 0) {
-          try { await sim.loadSample(); } catch (e) { /* served over file:// — user can Load .BAS */ }
-          sim.boot(); ui.buildStatic();
-        }
-        setActive(true); ui.refresh(true);
-      } else setActive(false);
+    const ensureBooted = async () => {
+      if (sim.booted) return;
+      if (Object.keys(sim.programs).length === 0) { try { await sim.loadSample(); } catch (e) { /* file:// — use Load .BAS */ } }
+      sim.boot(); ui.buildStatic();
     };
-    // Return to visualizer when a view/edit mode button is pressed.
-    document.querySelectorAll('#toolbar .mode-btn[data-mode]').forEach(b => b.addEventListener('click', () => { if (active) setActive(false); }));
 
-    // Animation loop.
-    let last = 0;
+    btn.onclick = async () => {
+      if (!active) { await ensureBooted(); setActive(true); ui.refresh(true); }
+      else setActive(false);
+    };
+    // Live HMI: load the operator screens, start running, and show the HMI view.
+    ui.rootEl.querySelector('#sim-hmi').onclick = async () => {
+      await ensureBooted();
+      const b = ui.rootEl.querySelector('#sim-hmi'); const label = b.textContent; b.textContent = 'loading…';
+      if (!sim.hmiLoaded) { try { await sim.loadHmiScreens(); } catch (e) { console.warn('HMI load failed', e); } }
+      b.textContent = label;
+      sim.running = true;
+      setActive(false); // reveal View mode (the HMI), keep the engine running
+    };
+    minibar.querySelector('#mb-run').onclick = () => { sim.running = !sim.running; updateMinibar(); };
+    minibar.querySelector('#mb-dash').onclick = () => { setActive(true); ui.refresh(true); };
+    minibar.querySelector('#mb-speed').onchange = (e) => { sim.speed = parseFloat(e.target.value); const s = ui.rootEl.querySelector('#sim-speed'); if (s) s.value = e.target.value; };
+
+    // View/Edit toolbar buttons leave the dashboard but keep the sim + minibar.
+    document.querySelectorAll('#toolbar .mode-btn[data-mode]').forEach(b => b.addEventListener('click', () => { if (active) setActive(false); else showMinibar(); }));
+
     function loop(now) {
       sim.frame(now);
       if (active && sim.booted) { ui._frac = (ui._frac || 0) + 1; if (sim.running ? (ui._frac % 2 === 0) : true) ui.refresh(false); }
+      else if (sim.booted) updateMinibar();
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);

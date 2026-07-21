@@ -1,0 +1,331 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TGM VerMajor="1" VerMinor="0">
+  <Device MinClientVersion="2.4.3.2913" DesignerVersion="2.4.3.2913" LegacyTextBoxMode="False" ScreenResolution="1024,600" StartupPage="OPERATOR_MAIN">
+    <Pages>
+      <Page File="CALIBRATION.TGD" />
+      <Page File="HEATER_OFF_ON_CONTROL.TGD" />
+      <Page File="MIXER.TGD" />
+      <Page File="OPERATOR_MAIN.TGD" />
+      <Page File="PID_PARAMETERS.TGD" />
+      <Page File="RECIPE.TGD" />
+      <Page File="SCHEDULE.TGD" />
+    </Pages>
+    <Images AutoPurge="False">
+      <Image File="00_Roller.png" />
+      <Image File="01_Roller.png" />
+      <Image File="arrowDown.png" />
+      <Image File="arrowLeft.png" />
+      <Image File="arrowRight.png" />
+      <Image File="arrowUp.png" />
+      <Image File="CovexPump.png" />
+      <Image File="CovexPumpGreen (2).png" />
+      <Image File="RectBtnRed127[llup].png" />
+      <Image File="RectBtnRed137[lldn].png" />
+      <Image File="RectBtnRed137[up].png" />
+      <Image File="Roller.png" />
+      <Image File="RollerGreen.png" />
+    </Images>
+    <TGT>
+      <Assemblies>
+        <Assembly FulName="HMIClient, Version=2.4.0.2675, Culture=neutral, PublicKeyToken=null">
+          <Components>
+            <Component>
+              <Type>Trio.HMIComponents.Editor.HMIEditorControl</Type>
+              <Properties>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>BindingRefreshPeriod</Name>
+                  <DefaultValue>250</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>ImageSmartStretch</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBTextBox</Type>
+              <Properties>
+                <Property>
+                  <Type>Trio.HMI.Controls.TVBTextFormat</Type>
+                  <Name>FormatType</Name>
+                  <DefaultValue>FORMAT_TEXT</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Windows.Forms.BorderStyle</Type>
+                  <Name>BorderStyle</Name>
+                  <DefaultValue>FixedSingle</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Windows.Forms.AnchorStyles</Type>
+                  <Name>Anchor</Name>
+                  <DefaultValue>Top,Left</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Enabled</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Drawing.Font</Type>
+                  <Name>Font</Name>
+                  <DefaultValue xml:space="preserve">DejaVu Sans:20:0</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>Height</Name>
+                  <DefaultValue>28</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Visible</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>Width</Name>
+                  <DefaultValue>100</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBLabel</Type>
+              <Properties>
+                <Property>
+                  <Type>Trio.HMI.Controls.TVBTextFormat</Type>
+                  <Name>FormatType</Name>
+                  <DefaultValue>FORMAT_TEXT</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Drawing.ContentAlignment</Type>
+                  <Name>TextAlign</Name>
+                  <DefaultValue>TopLeft</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Windows.Forms.AnchorStyles</Type>
+                  <Name>Anchor</Name>
+                  <DefaultValue>Top,Left</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Drawing.Font</Type>
+                  <Name>Font</Name>
+                  <DefaultValue xml:space="preserve">DejaVu Sans:20:0</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Visible</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBLine</Type>
+              <Properties>
+                <Property>
+                  <Type>System.Windows.Forms.AnchorStyles</Type>
+                  <Name>Anchor</Name>
+                  <DefaultValue>Top,Left</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBRectangle</Type>
+              <Properties>
+                <Property>
+                  <Type>System.Windows.Forms.AnchorStyles</Type>
+                  <Name>Anchor</Name>
+                  <DefaultValue>Top,Left</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBPictureBox</Type>
+              <Properties>
+                <Property>
+                  <Type>System.Windows.Forms.AnchorStyles</Type>
+                  <Name>Anchor</Name>
+                  <DefaultValue>Top,Left</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Enabled</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Visible</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>ImageSmartStretch</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBButton</Type>
+              <Properties>
+                <Property>
+                  <Type>System.Windows.Forms.AnchorStyles</Type>
+                  <Name>Anchor</Name>
+                  <DefaultValue>Top,Left</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Enabled</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Drawing.Font</Type>
+                  <Name>Font</Name>
+                  <DefaultValue xml:space="preserve">DejaVu Sans:20:0</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>Height</Name>
+                  <DefaultValue>40</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Visible</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>Width</Name>
+                  <DefaultValue>120</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>ImageSmartStretch</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBDataGrid</Type>
+              <Properties>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>HeaderHeight</Name>
+                  <DefaultValue>-1</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>RowHeight</Name>
+                  <DefaultValue>-1</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Drawing.Font</Type>
+                  <Name>HeaderFont</Name>
+                  <DefaultValue xml:space="preserve">DejaVu Sans:20:0</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>SelectedRow</Name>
+                  <DefaultValue>-1</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>SelectedColumn</Name>
+                  <DefaultValue>-1</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Windows.Forms.AnchorStyles</Type>
+                  <Name>Anchor</Name>
+                  <DefaultValue>Top,Left</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Drawing.Font</Type>
+                  <Name>Font</Name>
+                  <DefaultValue xml:space="preserve">DejaVu Sans:20:0</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>Height</Name>
+                  <DefaultValue>100</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>Width</Name>
+                  <DefaultValue>100</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Drawing.Font</Type>
+                  <Name>CaptionFont</Name>
+                  <DefaultValue xml:space="preserve">DejaVu Sans:20:0</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>CaptionHeight</Name>
+                  <DefaultValue>-1</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>RowCount</Name>
+                  <DefaultValue>-1</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Support.TVBDataGridColumnTextBound</Type>
+              <Properties />
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBVirtKeyBoard</Type>
+              <Properties>
+                <Property>
+                  <Type>System.Drawing.Font</Type>
+                  <Name>Font</Name>
+                  <DefaultValue xml:space="preserve">DejaVu Sans:20:0</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>ButtonWidth</Name>
+                  <DefaultValue>56</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>ButtonHeight</Name>
+                  <DefaultValue>56</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+            <Component>
+              <Type>Trio.HMI.Controls.TVBCheckBox</Type>
+              <Properties>
+                <Property>
+                  <Type>System.Windows.Forms.AnchorStyles</Type>
+                  <Name>Anchor</Name>
+                  <DefaultValue>Top,Left</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Enabled</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Drawing.Font</Type>
+                  <Name>Font</Name>
+                  <DefaultValue xml:space="preserve">DejaVu Sans:20:0</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Boolean</Type>
+                  <Name>Visible</Name>
+                  <DefaultValue>true</DefaultValue>
+                </Property>
+                <Property>
+                  <Type>System.Int32</Type>
+                  <Name>Width</Name>
+                  <DefaultValue>130</DefaultValue>
+                </Property>
+              </Properties>
+            </Component>
+          </Components>
+        </Assembly>
+      </Assemblies>
+    </TGT>
+  </Device>
+</TGM>

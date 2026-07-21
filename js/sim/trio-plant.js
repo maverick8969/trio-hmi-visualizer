@@ -41,6 +41,17 @@
     { key: 'pumpB', label: 'Pump B', axis: 2, flowVr: 632, aveVr: 640, calVr: 641 },
   ];
 
+  // Fixed VR / channel layout for the nip-roll Optidrive and mixer VFD.
+  const NIP = {
+    ctrlWord: 5010, statusWord: 5000, statusSpeed: 5001, speedRef: 5011,
+    speedSetptVr: 71, inPerMinHzVr: 590, axis: 4,
+    bitRun: 0, bitFastStop: 1, bitFaultReset: 2, bitCoastStop: 3, bitFault: 1, // status fault bit
+  };
+  const MIXER = {
+    runOp: 0, speedSpVr: 550, refSpeedVr: 565, aoutSpeed: 6, ainFeedback: 8,
+    dacMax: 2048, maxSpeed: 18000, axis: 5,
+  };
+
   class TrioPlant {
     constructor(machine, opts) {
       this.m = machine;
@@ -56,6 +67,11 @@
       // per-zone thermal state
       this.zones = ZONES.map(z => Object.assign({ tempC: this.params.ambientC }, z));
       this.pumps = PUMPS.map(pp => Object.assign({ flow: 0 }, pp));
+      // nip-roll drive + mixer VFD state
+      this.nip = { running: false, speed: 0, speedRef: 0, fault: false };
+      this.mixer = { running: false, rpm: 0, cmdRpm: 0, feedbackDac: 0 };
+      this.speedPerDac = MIXER.maxSpeed / MIXER.dacMax; // 18000/2048 rpm per DAC count
+      this.dacPerSpeed = MIXER.dacMax / MIXER.maxSpeed;
       // seed sensor VRs so control "sensor present" gates pass at boot
       this.publishSensors();
       // seed pump flow cal factors so flow is non-zero without meter comms
@@ -82,7 +98,45 @@
         const rpm = Math.abs(this.m.getAxisParam(pp.axis, 'MSPEED'));
         pp.flow = rpm * P.flowGperSecPerRPM;
       }
+      this.stepNip(dt);
+      this.stepMixer(dt);
       this.publishSensors();
+    }
+
+    // --- Nip-roll Optidrive VFD (EtherCAT PDO model) ---
+    // Reads the control word (VR5010) + speed reference (VR5011), drives the
+    // nip axis, and publishes the status word (VR5000 running/fault) and speed
+    // feedback (VR5001) back as the drive would over its PDO.
+    stepNip(dt) {
+      const m = this.m;
+      const ctrl = Math.floor(m.getVr(NIP.ctrlWord));
+      const run = (ctrl & (1 << NIP.bitRun)) && !(ctrl & (1 << NIP.bitFastStop)) && !(ctrl & (1 << NIP.bitCoastStop)) && !this.nip.fault;
+      const setpt = m.getVr(NIP.speedSetptVr);          // in/min
+      const target = run ? setpt : 0;
+      this.nip.speed += (target - this.nip.speed) * Math.min(1, dt * 3);
+      this.nip.running = !!run;
+      m.axes[NIP.axis].mspeed = this.nip.speed;
+      let status = Math.floor(m.getVr(NIP.statusWord));
+      if (run) status |= (1 << NIP.bitRun); else status &= ~(1 << NIP.bitRun);
+      if (this.nip.fault) status |= (1 << NIP.bitFault); else if (!run) status &= ~(1 << NIP.bitFault);
+      m.setVr(NIP.statusWord, status);
+      this.nip.speedRef = m.getVr(NIP.speedRef);
+      m.setVr(NIP.statusSpeed, run ? this.nip.speedRef : 0);
+    }
+
+    // --- Mixer VFD (analog) ---
+    // AOUT(6) is the speed-reference DAC; when Out_MixerRun (OP0) is on the
+    // spindle spins up to the commanded rpm, and AIN(8) is driven as the speed
+    // feedback the code reads back into mixer_reference_speed.
+    stepMixer(dt) {
+      const m = this.m;
+      this.mixer.running = m.readOp(MIXER.runOp) === 1;
+      this.mixer.cmdRpm = m.getAout(MIXER.aoutSpeed) * this.speedPerDac;
+      const target = this.mixer.running ? this.mixer.cmdRpm : 0;
+      this.mixer.rpm += (target - this.mixer.rpm) * Math.min(1, dt * 2);
+      m.axes[MIXER.axis].mspeed = this.mixer.rpm;
+      this.mixer.feedbackDac = this.mixer.rpm * this.dacPerSpeed; // zero_offset baseline 0
+      m.setAin(MIXER.ainFeedback, this.mixer.feedbackDac);
     }
 
     publishSensors() {
@@ -99,6 +153,19 @@
     // ---- introspection / tuning for UI ----
     getZoneTemps() { return this.zones.map(z => ({ key: z.key, label: z.label, tempC: z.tempC, tempF: F(z.tempC), on: this.m.readOp(z.op) === 1 })); }
     getPumpFlows() { return this.pumps.map(pp => ({ key: pp.key, label: pp.label, rpm: Math.abs(this.m.getAxisParam(pp.axis, 'MSPEED')), flow: pp.flow })); }
+    getDrives() {
+      const m = this.m;
+      return {
+        nip: {
+          running: this.nip.running, speed: this.nip.speed, speedRef: this.nip.speedRef,
+          ctrl: Math.floor(m.getVr(NIP.ctrlWord)), status: Math.floor(m.getVr(NIP.statusWord)),
+        },
+        mixer: {
+          running: this.mixer.running, rpm: this.mixer.rpm, cmdRpm: this.mixer.cmdRpm,
+          aoutDac: m.getAout(MIXER.aoutSpeed), ainDac: this.mixer.feedbackDac,
+        },
+      };
+    }
     setParam(k, v) { if (k in this.params) this.params[k] = v; }
   }
 

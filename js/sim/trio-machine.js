@@ -70,6 +70,15 @@
       this.eventSink = opts.eventSink || null;
       // physical E-stop line: 1 = healthy/released, 0 = pressed. Default released.
       this.estopLine = 1;
+      // traverse home-switch trip position (axis 0 units); homing forwards to it
+      this.homeSwitchPos = opts.homeSwitchPos != null ? opts.homeSwitchPos : 2.0;
+      // axes that measure speed in rpm (position integrates in revs, /60);
+      // all others integrate mpos += mspeed*dt (Trio units/sec convention).
+      this.rpmAxes = opts.rpmAxes || { 1: true, 2: true, 3: true, 5: true };
+      // axes NOT on the EtherCAT servo torque path — the nip-roll Optidrive
+      // (4) and the mixer VFD (5) are analog/PDO driven; the plant owns their
+      // mspeed, so step() skips the servo ramp/STO logic for them.
+      this.externalAxes = opts.externalAxes || { 4: true, 5: true };
     }
 
     // ---- VR ----
@@ -113,13 +122,21 @@
       ch = Math.round(ch);
       // IN 0 = safety E-stop line (1 = healthy, 0 = pressed). Fault overrides.
       if (ch === 0) return (this.estopLine && !this.faults.estopHeld) ? 1 : 0;
-      if (this.inOverrides && this.inOverrides[ch] !== undefined) return this.inOverrides[ch];
+      // Forced by the UI / test takes precedence.
+      if (this.inForced && this.inForced[ch] !== undefined) return this.inForced[ch];
+      // IN 1 = traverse home switch: active once the traverse (axis 0) has run
+      // forward past the home-switch position (drives the DATUM homing search).
+      // Modeled as the logical reading the code expects (INVERT_IN is recorded
+      // but not re-applied here — see homeSwitchPos).
+      if (ch === 1) return (this.axes[0].mpos >= this.homeSwitchPos) ? 1 : 0;
       return this.inState ? (this.inState[ch] ? 1 : 0) : 0;
     }
-    setIn(ch, v) { if (!this.inState) this.inState = new Uint8Array(64); this.inState[Math.round(ch)] = v ? 1 : 0; }
+    setIn(ch, v) { if (!this.inForced) this.inForced = {}; this.inForced[Math.round(ch)] = v ? 1 : 0; }
+    clearInForce(ch) { if (this.inForced) delete this.inForced[Math.round(ch)]; }
 
     // ---- analog ----
     _ain(ch) { ch = Math.round(ch); return this.ainVals[ch] || 0; }
+    setAin(ch, v) { ch = Math.round(ch); if (ch >= 0 && ch < this.ainVals.length) this.ainVals[ch] = v; }
     getAout(ch) { ch = Math.round(ch); return this.aoutVals[ch] || 0; }
     setAout(ch, v) { ch = Math.round(ch); if (ch >= 0 && ch < this.aoutVals.length) this.aoutVals[ch] = v; }
     dvIn(ch) { ch = Math.round(ch); return this.dvInVals[ch] || 0; }
@@ -236,6 +253,12 @@
       this._simMs = rt ? rt.simTime : (this._simMs || 0) + dtMs;
       const dt = dtMs / 1000;
       for (const ax of this.axes) {
+        // External (VFD/analog) axes: the plant owns mspeed; just integrate pos.
+        if (this.externalAxes[ax.num]) {
+          ax.mpos += (this.rpmAxes[ax.num] ? (ax.mspeed / 60) : ax.mspeed) * dt;
+          ax.dpos = ax.mpos;
+          continue;
+        }
         // Safe-torque-off model: torque requires WDOG (STO energized) AND the
         // servo loop closed (SERVO=1). AXIS_ENABLE is the EtherCAT drive-enable
         // (set during boot bring-up / reset) and is recorded but not gating —
@@ -247,10 +270,16 @@
           target = 0;
           if (Math.abs(ax.mspeed) < 1e-6) { ax.mspeed = 0; if (ax.mtype !== MTYPE_IDLE) ax.mtype = MTYPE_IDLE; ax.dir = 0; }
         } else if (ax.moveTarget != null) {
-          // point move: decelerate onto target (simplified — proportional approach)
+          // point move (MOVE/MOVEABS): trapezoidal profile — cruise at SPEED,
+          // then decelerate so the axis stops ON target (no overshoot/hunting).
           const remain = ax.moveTarget - ax.mpos;
-          if (Math.abs(remain) < 1e-4) { ax.mpos = ax.moveTarget; ax.moveTarget = null; ax.dir = 0; ax.mtype = MTYPE_IDLE; target = 0; }
-          else target = Math.sign(remain) * ax.sp;
+          const absR = Math.abs(remain);
+          if (absR < 0.01 && Math.abs(ax.mspeed) < 0.05) {
+            ax.mpos = ax.moveTarget; ax.moveTarget = null; ax.dir = 0; ax.mtype = MTYPE_IDLE; target = 0;
+          } else {
+            const vStop = Math.sqrt(2 * (ax.decel || 1000) * absR); // speed that still stops in `remain`
+            target = Math.sign(remain) * Math.min(ax.sp, vStop);
+          }
         } else {
           target = ax.dir * ax.sp;
         }
@@ -261,8 +290,9 @@
         else if (ax.mspeed > target) ax.mspeed = Math.max(target, ax.mspeed - dv);
         // settle to idle when stopped & not commanded
         if (ax.dir === 0 && ax.moveTarget == null && Math.abs(ax.mspeed) < 1e-3) { ax.mspeed = 0; if (torque || ax.mtype !== MTYPE_IDLE) ax.mtype = MTYPE_IDLE; }
-        // integrate position (units/sec; pumps use rpm -> rev/sec)
-        ax.mpos += (ax.mspeed / 60) * dt;
+        // integrate position. Rotary (rpm) axes advance in revs (mspeed/60);
+        // linear axes (traverse, nip) advance mpos += mspeed*dt (units/sec).
+        ax.mpos += (this.rpmAxes[ax.num] ? (ax.mspeed / 60) : ax.mspeed) * dt;
         ax.dpos = ax.mpos;
       }
     }

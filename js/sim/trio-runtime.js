@@ -478,6 +478,7 @@
         case 'TABLE': { const a = cargs(); if (a.length >= 2) { for (let k = 1; k < a.length; k++) this.machine.tableSet(Math.round(a[0]) + (k - 1), a[k]); } return {}; }
         case 'WDOG': return {}; // handled as assignment normally
         case 'ETHERCAT': this.machine.ethercat(cargs(), op.callArgs, p, this); return {};
+        case 'USER_PID': { const a = cargs(); this.execUserPid(p, a[0] || 0, Math.round(a[1]), Math.round(a[2])); return {}; }
         case 'ETHERNET': this.machine.ethernet ? this.machine.ethernet(cargs()) : null; return {};
         case 'CO_READ': case 'CO_WRITE': return {}; // handled as function calls when they return a value
         case 'IP_PROTOCOL_CTRL': return {};
@@ -740,6 +741,51 @@
       if (!isNaN(n)) return n;
       this.warnOnce(p, 'bit:' + lname, 'unknown bit field "' + field + '" — using 0');
       return 0;
+    }
+
+    // ---- USER_PID: positional PID matching the project's VR-block contract ----
+    // USER_PID(mode, in_base, out_base). All state lives in the VR table, so
+    // this is a pure function of the blocks:
+    //   IN  +0 auto +1 pv +2 sp +3 xout_manual +4 kp +5 ti +6 td +7 scan_ms
+    //       +8 min_out +9 max_out +10 use_i +11 hold_i +12 reset_i +13 igain_reset
+    //       +14 deadband +15 ffd
+    //   OUT +0 xout +1 err +2 last_p +3 last_i +4 last_d +5 at_high +6 at_low
+    //       +7 i_sum(internal) +8 last_pv(internal) +10 initialized(internal)
+    // Clamping is enabled only when max_out > min_out (the project leaves both 0
+    // for the pumps, i.e. unclamped). Anti-windup backs the integral out on clamp.
+    execUserPid(p, mode, inB, outB) {
+      const V = (o) => this.getVr(inB + o), O = (o) => this.getVr(outB + o), Wo = (o, v) => this.setVr(outB + o, v);
+      const auto = V(0), pv = V(1), sp = V(2), xman = V(3);
+      const kp = V(4), ti = V(5), td = V(6), scan = V(7);
+      const minO = V(8), maxO = V(9), useI = V(10), holdI = V(11), resetI = V(12), igainReset = V(13), deadb = V(14), ffd = V(15);
+      const dt = scan > 0 ? scan / 1000 : 1;
+      let err = sp - pv;
+      if (deadb > 0 && Math.abs(err) <= deadb) err = 0;
+      let iSum = O(7), lastPv = O(8), inited = O(10);
+      if (resetI) iSum = igainReset;
+      if (!inited) { lastPv = pv; inited = 1; }
+      let pTerm = 0, iTerm = 0, dTerm = 0, xout;
+      if (!mode || !auto) {
+        // manual / hold: output follows manual value with bumpless integral tracking
+        xout = xman;
+        pTerm = kp * err;
+        iSum = xman - pTerm;
+        iTerm = iSum;
+      } else {
+        pTerm = kp * err;
+        if (useI && !holdI && ti > 0) iSum += (kp / ti) * err * dt;
+        iTerm = useI ? iSum : 0;
+        const dPv = pv - lastPv;
+        dTerm = (td > 0) ? -(kp * td * dPv / dt) : 0; // derivative on measurement (no kick)
+        xout = pTerm + iTerm + dTerm + ffd;
+      }
+      let atHigh = 0, atLow = 0;
+      if (maxO > minO) {
+        if (xout > maxO) { xout = maxO; atHigh = 1; if (useI && ti > 0 && auto && mode) iSum -= (kp / ti) * err * dt; }
+        else if (xout < minO) { xout = minO; atLow = 1; if (useI && ti > 0 && auto && mode) iSum -= (kp / ti) * err * dt; }
+      }
+      Wo(0, xout); Wo(1, err); Wo(2, pTerm); Wo(3, iTerm); Wo(4, dTerm);
+      Wo(5, atHigh); Wo(6, atLow); Wo(7, iSum); Wo(8, pv); Wo(10, inited);
     }
 
     // ---- VR helpers ----

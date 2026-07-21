@@ -89,6 +89,23 @@
 #sim-vrfilter { width: 100%; margin-bottom: 6px; padding: 4px 6px; background: #313244; color: #cdd6f4;
   border: 1px solid #45475a; border-radius: 4px; font-size: 11px; }
 
+/* regression scenarios */
+.scn-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 11px; }
+.scn-run { padding: 1px 8px; background: #45475a; color: #cdd6f4; border: 1px solid #585b70; border-radius: 3px; cursor: pointer; }
+.scn-run:hover { background: #585b70; }
+.scn-name { flex: 1; color: #cdd6f4; }
+.scn-res { font-family: monospace; color: #6c7086; min-width: 44px; text-align: right; }
+.scn-res.ok { color: #a6e3a1; font-weight: 600; } .scn-res.bad { color: #f38ba8; font-weight: 600; }
+
+/* floating mini control bar (shown while viewing/clicking the live HMI) */
+#sim-minibar { position: fixed; bottom: 12px; right: 12px; z-index: 600; display: flex; align-items: center;
+  gap: 8px; background: rgba(49,50,68,0.96); border: 1px solid #89b4fa; border-radius: 8px; padding: 6px 10px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.55); color: #cdd6f4; font-size: 12px; }
+#sim-minibar b { color: #89b4fa; }
+#sim-minibar .sb { padding: 3px 10px; border: 1px solid #585b70; border-radius: 4px; background: #45475a; color: #cdd6f4; cursor: pointer; }
+#sim-minibar .sb:hover { background: #585b70; }
+#sim-minibar select { background: #45475a; color: #cdd6f4; border: 1px solid #585b70; border-radius: 4px; padding: 2px; }
+
 /* log */
 #sim-logcard { margin: 0 8px 8px; }
 #sim-log { max-height: 150px; overflow: auto; font-family: monospace; font-size: 11px; }
