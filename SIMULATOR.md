@@ -6,7 +6,22 @@ simulated controller and plant, so you can test and troubleshoot logic, sequenci
 control loops, and safety behavior **before flashing any firmware** — and drive it all from your
 **real operator HMI**.
 
-Open `index.html` (or run `./start.sh`) and click **◉ Simulator** in the toolbar.
+## Running it
+
+It's a self-contained browser app (HTML/JS/CSS, no build step, no dependencies) and runs the same on
+**Windows, macOS, or Linux** in any modern browser (Chrome, Edge, Firefox, Safari).
+
+Serve it over a tiny local web server, then click **◉ Simulator** in the toolbar:
+
+- **macOS / Linux:** `./start.sh` (or `python3 -m http.server 8000`) → open `http://localhost:8000`.
+- **Windows:** double-click `start.bat` (or run `python -m http.server 8000`) → open `http://localhost:8000`.
+
+The local server is only needed so the simulator can fetch the bundled sample programs and the Live-HMI
+screens — browsers block those fetches when you open the page directly as a `file://` URL. You *can*
+still open `index.html` directly, but then use the **Load Folder** button to pick the `samples/line2`
+folder (and `samples/line2-hmi` for the HMI) by hand.
+
+The optional Node test suite (`node tests/<file>.js`) also runs cross-platform wherever Node is installed.
 
 ---
 
