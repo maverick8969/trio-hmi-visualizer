@@ -59,6 +59,7 @@
           <div class="sim-card"><h4>Operator Controls</h4><div id="sim-ops"></div></div>
           <div class="sim-card"><h4>Fault Injection</h4><div id="sim-faults"></div></div>
           <div class="sim-card"><h4>Regression Scenarios <button id="sim-run-all" class="sb" style="font-size:10px;padding:2px 8px;">▶ Run all</button></h4><div id="sim-scenarios"></div></div>
+          <div class="sim-card"><h4>Production / KPI (Modbus share block)</h4><div id="sim-kpi"></div></div>
           <div class="sim-card"><h4>Trend</h4><canvas id="sim-trend" width="360" height="140"></canvas><div id="sim-trend-key"></div></div>
         </div>
         <div class="sim-col">
@@ -148,6 +149,18 @@
     };
     // Pumps RUN also applies the Pump A setpoint (recipe load zeroes it at boot),
     // so a single click actually spins the pumps.
+    // Recipe selector (loads working setpoints from TABLE in manual mode).
+    {
+      const row = el('div', 'op-row'); row.appendChild(el('span', 'op-lbl', 'Recipe (manual)'));
+      const sel = el('select', 'op-num'); sel.style.width = '90px';
+      const recs = (root.TrioPlant && TrioPlant.DEFAULT_RECIPES) || [];
+      recs.forEach((r, i) => { const o = el('option', null, 'Recipe ' + (r[0] || i + 1)); o.value = i; sel.appendChild(o); });
+      sel.value = String(Math.max(0, Math.round(sim.getG('reciperowindex') || 0)));
+      sel.onchange = () => sim.setG('reciperowindex', parseInt(sel.value));
+      this._numInputs = this._numInputs || [];
+      row.appendChild(sel); host.appendChild(row);
+      this._recipeSel = sel;
+    }
     toggle('Pumps RUN', () => sim.getG('hmi_pumps_run'), (v) => {
       if (v && (sim.getG('pumpa_rpm_setpoint') || 0) <= 0) {
         const sp = this._pumpSpInput ? parseFloat(this._pumpSpInput.value) || 50 : 50;
@@ -287,7 +300,7 @@
     if (this._numInputs) for (const ni of this._numInputs) {
       if (document.activeElement !== ni.inp) { const v = sim.getG(ni.name); if (v != null) ni.inp.value = fmt(v); }
     }
-    this.renderProcs(); this.renderAxes(); this.renderMotors(); this.renderHeat(); this.renderFlow();
+    this.renderProcs(); this.renderAxes(); this.renderMotors(); this.renderHeat(); this.renderFlow(); this.renderKpi();
     this.renderIO(); this.renderAnalog(); this.renderVR(force); this.renderLog();
     this.pushTrend(); this.drawTrend();
   };
@@ -308,6 +321,34 @@
       const moving = mt !== 0;
       html += `<div class="tr"><span>${a.name}</span><span class="${moving ? 'mv' : ''}">${MTYPE_NAME[mt] || mt}</span><span>${ms.toFixed(1)}</span><span>${mp.toFixed(2)}</span><span>${sv ? '●' : '○'}</span></div>`;
     }
+    host.innerHTML = html;
+  };
+
+  SimUI.prototype.renderKpi = function () {
+    const m = this.sim.machine, host = this.rootEl.querySelector('#sim-kpi');
+    const V = (i) => m.getVr(i);
+    const ls = Math.floor(V(4000));
+    const pill = (label, on) => `<span class="sys-bit ${on ? 'on' : ''}">${label}</span>`;
+    const lenFt = (V(4003) * 65536 + V(4002)) / 100;
+    const upS = V(4022) * 65536 + V(4021);
+    const hms = Math.floor(upS / 3600) + 'h ' + (Math.floor(upS / 60) % 60) + 'm ' + Math.round(upS % 60) + 's';
+    const pumpATot = V(4013) * 65536 + V(4012), pumpBTot = V(4015) * 65536 + V(4014);
+    let html = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' +
+      pill('NIP', ls & 1) + pill('TRAV', ls & 2) + pill('PMP-A', ls & 4) + pill('PMP-B', ls & 8) + pill('AUTO', ls & 16) +
+      pill('PRODUCING', V(4001) === 1) + '</div>';
+    html += '<div class="sim-table">';
+    const r = (a, b) => `<div class="tr" style="grid-template-columns:2fr 1fr;"><span>${a}</span><span class="vrv">${b}</span></div>`;
+    html += r('Product length', lenFt.toFixed(1) + ' ft');
+    html += r('Uptime', hms);
+    html += r('Nip / Trav speed', (V(4004) / 10).toFixed(1) + ' / ' + (V(4005) / 10).toFixed(1));
+    html += r('Pump A / B rpm', (V(4006) / 10).toFixed(1) + ' / ' + (V(4007) / 10).toFixed(1));
+    html += r('Belt rate', (V(4023) / 10).toFixed(1) + ' ft/min');
+    html += r('Mix ratio act / SP', (V(4010) / 10000).toFixed(3) + ' / ' + (V(4011) / 10000).toFixed(3));
+    html += r('Pump A / B total', pumpATot + ' / ' + pumpBTot + ' g');
+    html += r('Recipe #', Math.round(V(4016)));
+    html += r('End-shift btn visible', V(4058) ? 'yes' : 'no');
+    html += r('Heartbeat', Math.round(V(4020)));
+    html += '</div>';
     host.innerHTML = html;
   };
 

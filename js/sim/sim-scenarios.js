@@ -153,6 +153,26 @@
         { expect: { what: 'mixer_reference_speed', op: '~', value: 8000, tol: 700 } },
       ],
     },
+    {
+      name: 'Recipe select loads working setpoints',
+      steps: [...BOOT,
+        { expect: { what: 'pumpa_rpm_setpoint', op: '=', value: 40 } },   // recipe 0 auto-loads at boot
+        { set: { reciperowindex: 1 } }, { run: 1500 },
+        { expect: { what: 'pumpa_rpm_setpoint', op: '=', value: 60 } },
+        { expect: { what: 'traverse_speed_setpt', op: '=', value: 35 } },
+        { expect: { what: 'zone_control_enable', op: '=', value: 1 } },
+      ],
+    },
+    {
+      name: 'KPI share block + end-shift gate (bitwise mask)',
+      steps: [...BOOT,
+        { expect: { what: 'VR:4017', op: '=', value: 40 } },   // Share_SystemStatus mirror
+        { expect: { what: 'VR:4058', op: '=', value: 1 } },    // idle -> END SHIFT button visible
+        { set: { hmi_pumps_run: 1 } }, { run: 3000 },
+        { expect: { what: 'bit:4000.2', op: '=', value: 1 } }, // pump A bit set in line_state
+        { expect: { what: 'VR:4058', op: '=', value: 0 } },    // running -> hidden (mask != 0)
+      ],
+    },
   ];
 
   return { runScenario, resolveWhat, compare, BUILTINS };

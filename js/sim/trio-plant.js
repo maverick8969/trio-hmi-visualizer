@@ -52,6 +52,18 @@
     dacMax: 2048, maxSpeed: 18000, axis: 5,
   };
 
+  // Recipe TABLE layout (from START_AND_SET_VARIABLES): 20 rows x 16 items,
+  // stored column-major so recipe row R item i lives at TABLE(R + 20*i).
+  const RECIPE_ROWS = 20, RECIPE_ITEMS = 16;
+  // Each recipe: [Recipe_No, pumpA_rpm, pumpB_ratio, pumpC_ratio, traverse_speed,
+  //   accel, decel, pinchroll_speed, zone_ctrl, zone_end_pct, zone1_trav,
+  //   zone_pump_ctrl, zone1_pump_pct, zone2_pump_pct, zone3_trav, zone3_pump_pct]
+  const DEFAULT_RECIPES = [
+    [1, 40, 0.8, 0, 25, 50, 50, 30, 0, 25, 8, 0, 120, 80, 8, 120],
+    [2, 60, 1.0, 0, 35, 60, 60, 40, 1, 25, 10, 1, 120, 80, 10, 120],
+    [3, 80, 1.2, 0, 45, 70, 70, 50, 0, 30, 12, 0, 110, 90, 12, 110],
+  ];
+
   class TrioPlant {
     constructor(machine, opts) {
       this.m = machine;
@@ -76,6 +88,10 @@
       this.publishSensors();
       // seed pump flow cal factors so flow is non-zero without meter comms
       for (const pp of this.pumps) this.m.setVr(pp.calVr, this.params.flowGperSecPerRPM);
+      // Seed TABLE recipe memory (represents the flash-stored recipes the real
+      // controller loads via FLASHTABLE, which is a no-op stub here). RECIPES.BAS
+      // reads column-major: recipe row R, item i -> TABLE(R + 20*i) -> VR(100+i).
+      if (opts.seedRecipes !== false) TrioPlant.seedRecipes(this.m, opts.recipes || DEFAULT_RECIPES);
     }
 
     step(dtMs) {
@@ -169,7 +185,16 @@
     setParam(k, v) { if (k in this.params) this.params[k] = v; }
   }
 
+  // Write recipe rows into TABLE memory in the column-major layout RECIPES.BAS reads.
+  TrioPlant.seedRecipes = function (machine, recipes) {
+    for (let r = 0; r < recipes.length && r < RECIPE_ROWS; r++) {
+      const rec = recipes[r];
+      for (let i = 0; i < RECIPE_ITEMS; i++) machine.tableSet(r + RECIPE_ROWS * i, rec[i] || 0);
+    }
+  };
+
   TrioPlant.ZONES = ZONES;
   TrioPlant.PUMPS = PUMPS;
+  TrioPlant.DEFAULT_RECIPES = DEFAULT_RECIPES;
   return TrioPlant;
 });

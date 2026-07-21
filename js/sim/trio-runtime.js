@@ -607,9 +607,14 @@
           return node.op === '-' ? -v : +v;
         }
         case 'logical': {
-          const l = this.truthy(this.evalExpr(node.left, p));
-          if (node.op === 'AND') return (l && this.truthy(this.evalExpr(node.right, p))) ? 1 : 0;
-          return (l || this.truthy(this.evalExpr(node.right, p))) ? 1 : 0;
+          // TrioBASIC AND/OR are BITWISE integer operators. For 0/1 operands
+          // (comparison results, bit access, boolean flags) this matches logical
+          // AND/OR; for integer operands it performs the intended mask, e.g.
+          // `(share_line_state AND 15)` in SHARE_DATA. (NOT stays logical — see
+          // the 'unary' case — because the code uses it as `NOT READ_BIT(...)`.)
+          const l = Math.trunc(this.evalExpr(node.left, p));
+          const r = Math.trunc(this.evalExpr(node.right, p));
+          return node.op === 'AND' ? (l & r) : (l | r);
         }
         case 'binary': return this.evalBinary(p, node);
         default: return 0;

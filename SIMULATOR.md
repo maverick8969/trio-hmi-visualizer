@@ -35,6 +35,8 @@ program (see **Interactive HMI** below).
 | **Mixer** | VFD speed reference on `AOUT(6)` and feedback on `AIN(8)` (spindle spins up to command, reads back rpm), the lube shot-count state machine (init/run/prime), and `Out_MixerRun` interlocks |
 | **Heating** | Overhead zones 1–3, mixer head, mixer ΔP A/B — deadband on/off with timers, thermocouple/RTD `DV_IN` feedback, Kevlar `AOUT` |
 | **Watchdog / safety** | `WDOG`/STO, E-stop input, safety-relay reset pulse, `CANCEL`+`SERVO` shutdown, drive re-enable + settle-to-`0x28` recovery |
+| **Recipes** | `RECIPES.BAS` load from TABLE memory — selecting a row copies the recipe column into the working setpoints (VR 100–115) and edit buffer (300–315). Sample recipes are seeded into TABLE (representing flash). Save is faithfully dead (see findings) |
+| **Production / KPI** | `SHARE_DATA` publishes the full Modbus dashboard block (VR 4000–4058): bit-packed line state, product length, live speeds, mix ratio, soft totalizers, uptime, heartbeat, and the anti-misclick end-shift gate |
 | **Comms** | EtherCAT state machine + Modbus flow meters stubbed "healthy" (with fault injection to drop them) |
 
 ### Plant physics (simple & tunable)
@@ -68,9 +70,10 @@ operator controls and watch the HMI reflect it, or vice-versa.
 ## Using the dashboard
 
 - **Transport** — `Boot`, `Run`/`Pause`, `Step 100 ms`, `Fast-boot` (run the ~18 s boot instantly), speed 1×–100×.
-- **Operator Controls** — Pumps + setpoint, Purge, Auto mode, heater-zone enables/setpoints, **Nip Roll run + speed**, **Mixer run + speed**, and **Traverse home / auto-run / material window**. These write the same VRs the HMI buttons drive.
+- **Operator Controls** — **Recipe selector**, Pumps + setpoint, Purge, Auto mode, heater-zone enables/setpoints, **Nip Roll run + speed**, **Mixer run + speed**, and **Traverse home / auto-run / material window**. These write the same VRs the HMI buttons drive.
 - **Fault Injection** — press/release E-stop, pulse the safety-relay reset, drop EtherCAT, or kill meter comms.
 - **Motors & VFDs** — expected (commanded) vs actual RPM for every axis, plus the mixer VFD DAC command/feedback and the nip Optidrive control/status words.
+- **Production / KPI** — the Modbus share block surfaced as line-state pills, product length, uptime, live speeds, mix ratio, totalizers, recipe #, heartbeat, and the end-shift gate.
 - **Processes / Axes / Heaters / Flow** — live state: each process's current line and run/sleep state, axis `MTYPE`/`MSPEED`/`MPOS`, zone temperatures, pump rpm/flow.
 - **Regression Scenarios** — one-click declarative test scenarios with pass/fail assertions (see below).
 - **Digital & Analog I/O** — `OP`/`IN`/`AOUT`/`DV_IN` with real channel names; click an input to force it.
@@ -125,6 +128,11 @@ These are reproduced faithfully — the simulator does **not** silently "fix" th
 
 Treat these as leads to confirm on the bench, not as verdicts.
 
+> **Interpreter note:** TrioBASIC `AND`/`OR` are bitwise (they agree with logical for 0/1
+> operands); `SHARE_DATA.BAS` relies on this for `(share_line_state AND 15)` when gating the
+> anti-misclick END SHIFT button. The engine implements them bitwise and `NOT` logically, matching
+> how the code uses each. All engine language behavior is covered by `tests/`.
+
 ---
 
 ## Architecture
@@ -157,11 +165,12 @@ the HMI share one VR table.
 
 ## Not yet modeled
 
-- **Heater PID** — the deadband on/off heat control runs; the PID-mode heater blocks aren't yet driven (the `USER_PID` engine exists and is used by the pumps).
-- **Recipe grid / TABLE datagrid** — `TABLE` memory works and recipes load at boot; the interactive recipe editor grid isn't exercised end-to-end.
-- **Full Modbus/ADISRA/SHARE_DATA dashboards** — comms are stubbed healthy; the external KPI/Modbus register block isn't fully synthesized.
-- **Calibrated physics** — models are illustrative; tuning to logged line data is a future step.
+- **Recipe HMI datagrid (live rows)** — recipe *loading* works and TABLE memory is populated; the visualizer's `TVBDataGrid` renders placeholder rows (a pre-existing renderer limitation), so the recipe screen's grid doesn't yet show live TABLE data. The dashboard **Recipe selector** exercises the real load path.
+- **Calibrated physics** — models are illustrative; tuning to logged line data is a future step (provide CSV/history and the plant constants in `trio-plant.js` can be fit to it).
 - **Mixer lube pulse-timing detail** — the shot-count state machine runs; exact pulse-width/interval fidelity is simplified.
+- **ADISRA SCADA link** — `ADISRA_DATA` runs and stages its VRs; the external SCADA side isn't modeled.
+
+(Heater control in the real code is deadband on/off — there is no heater-PID code path — so nothing further to model there; the `USER_PID` engine exists and drives the pumps.)
 
 ---
 
@@ -169,6 +178,6 @@ the HMI share one VR table.
 
 Engine tests live in `tests/` (Node): `test-parser` (all 22 programs parse), `test-scenarios`
 (Phase-1 behavior), `test-fixes` (lexer/loop fixes), `test-pid`, `test-traverse`, `test-drives`
-(nip/mixer/length), and `test-scenario-harness` (the declarative built-ins). Run any with
-`node tests/<file>.js`. The dashboard's **Regression Scenarios** card runs the same built-ins in the
-browser.
+(nip/mixer/length), `test-recipes`, `test-share` (KPI block), and `test-scenario-harness` (the
+declarative built-ins — 7 scenarios, 25 assertions). Run any with `node tests/<file>.js`. The
+dashboard's **Regression Scenarios** card runs the same built-ins in the browser.
