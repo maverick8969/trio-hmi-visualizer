@@ -1,0 +1,106 @@
+{
+ "autorun": "START_AND_SET_VARIABLES.BAS",
+ "autorunProc": 1,
+ "programs": [
+  "ADISRA_DATA.BAS",
+  "CALIBRATION.BAS",
+  "CONFIG_THERMOCOUPLES.BAS",
+  "ERROR_CHECK_AND_RESET.BAS",
+  "HEATER_OFFON_CONTROL.BAS",
+  "HMI_ANIMATION.BAS",
+  "INIT_PARAMETERS.BAS",
+  "MIN_MAX.BAS",
+  "MIXER.BAS",
+  "NIP_ROLL.BAS",
+  "PID_TEST.BAS",
+  "PUMPS_RUN.BAS",
+  "PUMP_PID.BAS",
+  "READ_METERS.BAS",
+  "RECIPES.BAS",
+  "SHARED_VARIABLES.BAS",
+  "SHARE_DATA.BAS",
+  "SPEED_MINMAX.BAS",
+  "STARTUP.BAS",
+  "START_AND_SET_VARIABLES.BAS",
+  "TEST_SLIP.BAS",
+  "TRAVERSE.BAS"
+ ],
+ "project": {
+  "ADISRA_DATA.BAS": {
+   "name": "ADISRA_DATA",
+   "proc": null
+  },
+  "CALIBRATION.BAS": {
+   "name": "CALIBRATION",
+   "proc": null
+  },
+  "CONFIG_THERMOCOUPLES.BAS": {
+   "name": "CONFIG_THERMOCOUPLES",
+   "proc": null
+  },
+  "ERROR_CHECK_AND_RESET.BAS": {
+   "name": "ERROR_CHECK_AND_RESET",
+   "proc": null
+  },
+  "HEATER_OFFON_CONTROL.BAS": {
+   "name": "HEATER_OFFON_CONTROL",
+   "proc": null
+  },
+  "HMI_ANIMATION.BAS": {
+   "name": "HMI_ANIMATION",
+   "proc": null
+  },
+  "INIT_PARAMETERS.BAS": {
+   "name": "INIT_PARAMETERS",
+   "proc": null
+  },
+  "MIXER.BAS": {
+   "name": "MIXER",
+   "proc": null
+  },
+  "NIP_ROLL.BAS": {
+   "name": "NIP_ROLL",
+   "proc": null
+  },
+  "PID_TEST.BAS": {
+   "name": "PID_TEST",
+   "proc": null
+  },
+  "PUMP_PID.BAS": {
+   "name": "PUMP_PID",
+   "proc": null
+  },
+  "PUMPS_RUN.BAS": {
+   "name": "PUMPS_RUN",
+   "proc": null
+  },
+  "READ_METERS.BAS": {
+   "name": "READ_METERS",
+   "proc": null
+  },
+  "RECIPES.BAS": {
+   "name": "RECIPES",
+   "proc": null
+  },
+  "SHARE_DATA.BAS": {
+   "name": "SHARE_DATA",
+   "proc": null
+  },
+  "SPEED_MINMAX.BAS": {
+   "name": "SPEED_MINMAX",
+   "proc": null
+  },
+  "START_AND_SET_VARIABLES.BAS": {
+   "name": "START_AND_SET_VARIABLES",
+   "proc": null
+  },
+  "TEST_SLIP.BAS": {
+   "name": "TEST_SLIP",
+   "proc": null
+  },
+  "TRAVERSE.BAS": {
+   "name": "TRAVERSE",
+   "proc": null
+  }
+ }
+}
