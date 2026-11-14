@@ -30,11 +30,16 @@ and install the plugin. Manual install instead:
 
 ## Pinning
 
-To stop Line 2 agents from picking up unfinished simulator changes, pin the marketplace to a tag:
+`.claude/settings.json` pins the marketplace to the `v0.1.0` tag, so Line 2 agents don't pick up
+unfinished simulator changes:
 
 ```json
 "source": { "source": "github", "repo": "maverick8969/trio-hmi-visualizer", "ref": "v0.1.0" }
 ```
+
+To upgrade: bump `version` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` here,
+tag the release (`git tag v0.2.0 && git push origin v0.2.0`), then change `ref` in the Line 2 repo.
+For CI, pass the same tag as `ref:` on the `actions/checkout` step that fetches this repo.
 
 ## CI without Claude
 
@@ -43,7 +48,7 @@ The CLI is plain Node, so a Line 2 GitHub Actions job can run it directly:
 ```yaml
 - uses: actions/checkout@v4
 - uses: actions/checkout@v4
-  with: { repository: maverick8969/trio-hmi-visualizer, path: .trio }
+  with: { repository: maverick8969/trio-hmi-visualizer, ref: v0.1.0, path: .trio }
 - run: node .trio/tools/trio-sim.js --bas . --parse-only
 - run: node .trio/tools/trio-sim.js --bas . --scenario all
 ```

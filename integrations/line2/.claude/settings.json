@@ -3,7 +3,8 @@
     "trio-tools": {
       "source": {
         "source": "github",
-        "repo": "maverick8969/trio-hmi-visualizer"
+        "repo": "maverick8969/trio-hmi-visualizer",
+        "ref": "v0.1.0"
       }
     }
   },
