@@ -234,11 +234,14 @@ function renderTextBox(comp) {
     if (textBinding.mode === 'ReadWrite') {
       el.style.cursor = 'pointer';
       el.addEventListener('click', () => {
+        if (typeof app !== 'undefined' && app.mode === 'edit') return;
         // Check for OpenKeyPad events
         const kpAction = comp.events.find(e => e.name === 'Click' && e.actions.some(a => a.startsWith('OpenKeyPad')));
         if (kpAction && typeof app !== 'undefined') {
           const action = kpAction.actions.find(a => a.startsWith('OpenKeyPad'));
           app.handleAction(action, comp);
+        } else if (typeof app !== 'undefined' && app.showKeypad && b.evaluator && b.evaluator.write) {
+          app.showKeypad('Numeric', comp.name, comp);
         } else if (b.evaluator && b.evaluator.write) {
           const current = b.evaluator.evaluate(vrStore);
           const val = prompt('Enter value:', current);

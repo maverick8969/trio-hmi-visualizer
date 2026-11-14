@@ -73,6 +73,18 @@ function executeExec(expr) {
     return;
   }
 
+  // General assignment: VR(N)=<expr> or VR(N).B=<expr>
+  // e.g. "VR(20)=VR(20)+1", "VR(30)=VR(31)*2"
+  m = expr.match(/^\s*VR\((\d+)\)(?:\.(\d+))?\s*=(.+)$/);
+  if (m) {
+    try {
+      const val = compileExpression(m[3])(vrStore);
+      if (m[2] !== undefined) vrStore.setVRBit(parseInt(m[1]), parseInt(m[2]), val ? 1 : 0);
+      else vrStore.setVR(parseInt(m[1]), val);
+      return;
+    } catch (e) { /* fall through */ }
+  }
+
   // OP pattern: OP(N,READ_OP(N)=V) — log as unsupported
   console.log('Unsupported Exec:', expr);
 }

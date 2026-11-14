@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__ — HMI Simulator</title>
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<header id="topbar">
+  <div id="title">__TITLE__</div>
+  <nav id="tabs" aria-label="Pages"></nav>
+  <div id="top-actions">
+    <button id="btn-reset" type="button" title="Reset all variables to their initial values">Reset</button>
+    <button id="btn-sim" type="button" aria-pressed="true" title="Pause/resume the simulated controller rules">Sim: on</button>
+    <button id="btn-panel" type="button" title="Show/hide the variables panel">Variables</button>
+  </div>
+</header>
+<main id="layout">
+  <section id="stage">
+    <div id="canvas-wrapper"><div id="hmi-canvas"></div></div>
+  </section>
+  <aside id="side">
+    <div class="side-head">Controller variables <span class="hint">edit to simulate the controller</span></div>
+    <div id="vr-list"></div>
+    <div class="side-head">Event log</div>
+    <ol id="log"></ol>
+  </aside>
+</main>
+
+<div id="keypad-overlay" role="dialog" aria-modal="true" aria-label="Numeric keypad">
+  <div id="keypad">
+    <div id="keypad-target"></div>
+    <input type="text" id="keypad-display" inputmode="decimal" autocomplete="off">
+    <div class="kp-grid">
+      <button class="kp-btn" data-key="7">7</button><button class="kp-btn" data-key="8">8</button><button class="kp-btn" data-key="9">9</button><button class="kp-btn" data-key="bksp" aria-label="Backspace">&#9003;</button>
+      <button class="kp-btn" data-key="4">4</button><button class="kp-btn" data-key="5">5</button><button class="kp-btn" data-key="6">6</button><button class="kp-btn" data-key="clear">C</button>
+      <button class="kp-btn" data-key="1">1</button><button class="kp-btn" data-key="2">2</button><button class="kp-btn" data-key="3">3</button><button class="kp-btn cancel" data-key="cancel">Esc</button>
+      <button class="kp-btn" data-key="sign">+/-</button><button class="kp-btn" data-key="0">0</button><button class="kp-btn" data-key=".">.</button><button class="kp-btn enter" data-key="enter">OK</button>
+    </div>
+  </div>
+</div>
+
+<script id="hmi-data" type="application/json">__DATA__</script>
+<script>
+/*__RUNTIME__*/
+</script>
+</body>
+</html>
