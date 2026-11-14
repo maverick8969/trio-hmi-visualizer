@@ -1,0 +1,18 @@
+{
+  "name": "trio-sim",
+  "version": "0.1.0",
+  "description": "Headless Trio Motion controller simulator + HMI visualizer. Skills for running real TrioBASIC (.BAS) programs, asserting on VR outputs, diffing behavior before/after a change, and screenshotting the live operator HMI.",
+  "author": {
+    "name": "maverick8969"
+  },
+  "repository": "https://github.com/maverick8969/trio-hmi-visualizer",
+  "license": "MIT",
+  "keywords": [
+    "trio",
+    "triobasic",
+    "plc",
+    "hmi",
+    "simulator",
+    "line2"
+  ]
+}

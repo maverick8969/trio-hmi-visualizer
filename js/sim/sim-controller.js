@@ -107,14 +107,15 @@
 
   // Load the bundled HMI screens (TGM + TGDs + images) into the visualizer app
   // so they render (and animate from vrStore) in View mode.
-  SimController.prototype.loadHmiScreens = async function (base) {
+  SimController.prototype.loadHmiScreens = async function (base, tgmName) {
     base = base || 'samples/line2-hmi/';
-    const man = await fetch(base + 'LINE2_HMI.TGM').then(r => r.text());
+    tgmName = tgmName || 'LINE2_HMI.TGM';
+    const man = await fetch(base + tgmName.replace(/ /g, '%20')).then(r => r.text());
     const pages = Array.from(man.matchAll(/<Page File="([^"]+)"/g)).map(m => m[1]);
     const imgs = Array.from(man.matchAll(/<Image File="([^"]+)"/g)).map(m => m[1]);
     const enc = (n) => base + n.replace(/ /g, '%20');
     const files = [];
-    files.push(await this.fetchAsFile(enc('LINE2_HMI.TGM'), 'LINE2_HMI.TGM', 'text/xml'));
+    files.push(await this.fetchAsFile(enc(tgmName), tgmName, 'text/xml'));
     for (const p of pages) { try { files.push(await this.fetchAsFile(enc(p), p, 'text/xml')); } catch (e) { } }
     for (const im of imgs) { try { files.push(await this.fetchAsFile(enc(im), im, 'image/png')); } catch (e) { } }
     if (typeof app !== 'undefined' && app.loadFiles) await app.loadFiles(files);

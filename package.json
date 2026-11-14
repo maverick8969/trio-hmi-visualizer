@@ -1,0 +1,20 @@
+{
+  "name": "trio-hmi-visualizer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser HMI visualizer + headless simulator for Trio Motion controllers.",
+  "license": "MIT",
+  "bin": {
+    "trio-sim": "tools/trio-sim.js",
+    "hmi-shot": "tools/hmi-shot.js"
+  },
+  "scripts": {
+    "test": "node tests/run-all.js",
+    "sim": "node tools/trio-sim.js",
+    "hmi-shot": "node tools/hmi-shot.js",
+    "start": "python3 -m http.server 8000"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
