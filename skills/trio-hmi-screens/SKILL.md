@@ -39,7 +39,7 @@ Everything lives in this skill's directory (`SKILL_DIR` below = the folder conta
    ```bash
    node SKILL_DIR/scripts/check_preview.cjs hmi/out/preview.html --shots hmi/out/shots
    ```
-   It presses every button, enters a value in every input, reports dead buttons / broken keypads / JS errors, and screenshots each page. **Look at the screenshots** for clipped text, overlaps, low contrast and alignment. Iterate on the spec until clean. If Playwright can't be installed (offline, no Node), open `preview.html` in a browser and tell the user the automated check did not run.
+   It presses every button, enters an in-range value in every input, reports dead buttons, keypads wired to the wrong box, controls covered by others and JS errors, and screenshots each page. **Look at the screenshots** for clipped text, overlaps, low contrast and alignment. Iterate on the spec until clean. If Playwright can't be installed (offline, no Node), open `preview.html` in a browser and tell the user the automated check did not run.
 
 6. **Deliver**: list the TGD files, `preview.html` (open it in any browser — no server needed) and `VR_MAP.md`. Remind the user to add the TGD pages to their Motion Perfect HMI project and confirm they open in the HMI designer before deploying to a machine (see Fidelity below).
 
@@ -64,7 +64,7 @@ To edit an existing TGD by hand, read `references/tgd-format.md` first; keep pro
 
 ## Fidelity
 
-The TGD vocabulary here (component types, property names/types, binding and action syntax) is taken from TGD files produced by Motion Perfect and is what the Trio HMI Visualizer parses. A few `<type>` names are inferred (e.g. `Status` as `System.Boolean` on rectangles); they live in the `PROP_TYPES` / `STATUS_TYPE` tables at the top of `trio_hmi.py` so they can be corrected in one place. The simulator evaluates VR / bit / arithmetic / comparison expressions and `GotoPage`, `Exec` assignments, `VS`, `OpenKeyPad`; other controller expressions (`MPOS AXIS(0)`, `IN(5)`, `TABLE`, `LOOKUP`) show their stored value (editable from the VR panel only if they are VRs). Say so when a screen relies on them.
+The generated XML matches what Motion Perfect's HMI designer (2.4.3) writes. That was checked against a real project (the Line 2 screens in the trio-hmi-visualizer repo, `samples/line2-hmi/`): root and TGM attributes, property `<type>` names, `write_event` on editable bindings, `MinVal`/`MaxVal`, `REAL_NUMPAD_ENTER`/`INT_NUMPAD_ENTER` keypads. The vocabulary lives in the `PROP_TYPES` / `STATUS_TYPE` / `KEYPAD_KINDS` / `WRITE_EVENTS` tables at the top of `trio_hmi.py`. Generated pages have still not been loaded in the designer or on a panel by this skill's authors, so ask the user to confirm that before deployment. The simulator evaluates VR / bit / arithmetic / comparison expressions and `GotoPage`, `Exec` assignments, `VS`, `OpenKeyPad`; other controller expressions (`MPOS AXIS(0)`, `IN(5)`, `TABLE`, `LOOKUP`) show their stored value (editable from the VR panel only if they are VRs). Say so when a screen relies on them.
 
 ## References (read as needed)
 

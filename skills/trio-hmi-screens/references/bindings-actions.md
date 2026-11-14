@@ -6,15 +6,16 @@
 <property>
   <name>Text</name>
   <type>System.String</type>
-  <value></value>
+  <value />
   <binding>
-    <mcsource>VR(100)</mcsource>
+    <mcsource>VR:72</mcsource>
     <mode>ReadWrite</mode>
+    <write_event>LostFocus</write_event>
   </binding>
 </property>
 ```
 
-The HMI client polls each `mcsource` every `bindingrefreshperiod` ms (page setting, default 250) and pushes the value into the property. `ReadWrite` additionally writes operator input back (TextBox text via keypad, CheckBox `Checked` on tap).
+The HMI client polls each `mcsource` every `bindingrefreshperiod` ms (page setting, default 250) and pushes the value into the property. `ReadWrite` additionally writes operator input back on the `write_event`: `LostFocus` for TextBox `Text`, `CheckStateChanged` for CheckBox `Checked`, `SelectedRowChanged` for DataGrid `SelectedRow`. `ReadOnly` bindings have no `write_event`.
 
 ### `mcsource` syntax
 
@@ -22,7 +23,7 @@ The HMI client polls each `mcsource` every `bindingrefreshperiod` ms (page setti
 |---|---|---|---|---|
 | VR | `VR(591)`, `VR:591` | global VR register | yes | yes |
 | VR bit | `VR(5000).1` | bit 1 of `VR(5000)` (0/1) | yes | yes |
-| VR arithmetic | `VR(635)/100`, `VR(10)*2`, `VR(3)+1` | scaled display | no | yes |
+| VR arithmetic | `VR(635)/100`, `VR(10)*2`, `VR(3)+1` | scaled display (Motion Perfect projects do use `ReadWrite` on these) | not in the preview | yes |
 | VR difference | `VR(102)-VR(537)` | | no | yes |
 | Comparison / logic | `VR(547) = 1 AND (VR(608) = 1 OR VR(609) = 1)` | 1 when true | no | yes |
 | Program variable | `PROGRAM:varname:progname:-1` | BASIC LOCAL/global in a program | yes | yes (stored) |
@@ -69,7 +70,10 @@ Events: `Click` (Button, PictureBox, TextBox), `ButtonDown` / `ButtonUp` (Button
 | `Exec;VR(n)=<expr>` | assign (e.g. `VR(5)=VR(5)+1`, `VR(7)=0`) | yes |
 | `VS;VR:n;value` | write a value to a VR | yes |
 | `VS;PROGRAM:var:prog:-1;value` | write a program variable | yes |
-| `OpenKeyPad;Numeric;txtName` | open the numeric keypad for TextBox `txtName` (writes through its `Text` binding) | yes |
+| `OpenKeyPad;REAL_NUMPAD_ENTER;txtName` | open the decimal keypad for TextBox `txtName`; the value is written through **that** box's `Text` binding, limited by its `MinVal`/`MaxVal` | yes |
+| `OpenKeyPad;INT_NUMPAD_ENTER;txtName` | integer keypad (`INT_NUMPAD_ENTER_123` also exists) | yes |
 | `Exec;OP(8,1)` and other BASIC | executed by the controller | no (logged) |
+
+The third field of `OpenKeyPad` should name the TextBox that was tapped. If it names another box, tapping this one edits the other box's VR (an easy slip when copying controls); the validator and `check_preview.cjs` both flag it.
 
 `Exec` runs a BASIC statement on the controller. Prefer setting VR command bits over driving outputs or motion directly from the HMI — the controller program stays in charge of interlocks.

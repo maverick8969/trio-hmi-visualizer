@@ -110,8 +110,11 @@ const app = {
     this.keypadTarget = { evaluator: ev, comp: target };
     const disp = document.getElementById('keypad-display');
     disp.value = ev ? ev.evaluate(vrStore) : '';
+    const lo = target ? getProp(target, 'MinVal', null) : null;
+    const hi = target ? getProp(target, 'MaxVal', null) : null;
     document.getElementById('keypad-target').textContent =
-      (target ? target.name : '') + (tb ? '  →  ' + tb.mcsource : '');
+      (target ? target.name : '') + (tb ? '  →  ' + tb.mcsource : '') +
+      (lo !== null || hi !== null ? '   [' + (lo !== null ? lo : '') + ' … ' + (hi !== null ? hi : '') + ']' : '');
     document.getElementById('keypad-overlay').classList.add('visible');
     disp.focus();
     disp.select();
@@ -129,6 +132,15 @@ const app = {
         const t = this.keypadTarget;
         let v = parseFloat(d.value);
         if (t && t.comp && getProp(t.comp, 'FormatType', '') === 'FORMAT_INTEGER') v = Math.round(v);
+        const lo = t && t.comp ? getProp(t.comp, 'MinVal', null) : null;
+        const hi = t && t.comp ? getProp(t.comp, 'MaxVal', null) : null;
+        if (!isNaN(v) && ((lo !== null && v < lo) || (hi !== null && v > hi))) {
+          document.getElementById('keypad-target').textContent =
+            'Out of range: ' + (lo !== null ? lo : '-∞') + ' … ' + (hi !== null ? hi : '∞');
+          log('keypad ' + t.comp.name + ' rejected ' + v + ' (range ' + lo + '..' + hi + ')');
+          d.select();
+          return;
+        }
         if (t && t.evaluator && t.evaluator.write && !isNaN(v)) {
           t.evaluator.write(vrStore, v);
           log('keypad ' + (t.comp ? t.comp.name : '') + ' = ' + v, 'action');
@@ -218,6 +230,8 @@ const app = {
   applyInit() {
     this._quiet = true;
     vrStore._vr = {};
+    vrStore._programs = {};
+    vrStore._custom = {};
     Object.entries(DATA.init || {}).forEach(([addr, val]) => {
       const m = addr.match(/^VR\((\d+)\)(?:\.(\d+))?$/);
       if (!m) return;

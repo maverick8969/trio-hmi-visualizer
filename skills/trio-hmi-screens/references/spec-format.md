@@ -51,10 +51,10 @@ Every component: `type`, `x`, `y`, `w`, `h`, optional `name` (auto-named `lbl1`,
 | `type` | Extra keys | Main binding (`bind`) |
 |---|---|---|
 | `Label` | `text`, `font`, `fore`, `back` (default transparent), `align` (ContentAlignment: `TopLeft` … `MiddleCenter` … `BottomRight`, default `MiddleLeft`), `format` (`text`/`integer`/`real`), `dp`, `width` | `Text` (read-only) |
-| `TextBox` | as Label but `align` is `Left`/`Center`/`Right` (default `Right`), `border` (`FixedSingle`/`None`), `keypad` (default true), `editable` (default true) | `Text` — `ReadWrite` by default; a Click → `OpenKeyPad;Numeric;<name>` is added automatically |
+| `TextBox` | as Label but `align` is `Left`/`Center`/`Right` (default `Right`), `border` (`FixedSingle`/`None`), `min` / `max` (keypad rejects values outside), `keypad` (default true), `keypadKind`, `editable` (default true) | `Text` — `ReadWrite` (written on `LostFocus`) by default; a Click → `OpenKeyPad;INT_NUMPAD_ENTER;<name>` (integer format) or `REAL_NUMPAD_ENTER` is added automatically |
 | `Button` | `text`, `font` (default bold), `fore`, `back`, `image` | `Text` (read-only) |
-| `CheckBox` | `text`, `checked`, `editable` (default true) | `Checked` — `ReadWrite` by default (tap toggles the bit) |
-| `Rectangle` | `back`/`on` (colour when status true), `off` (`OffBackColour`, when false), `fore` (border; `transparent` = none) | `Status` |
+| `CheckBox` | `text`, `checked`, `editable` (default true) | `Checked` — `ReadWrite` by default, written on `CheckStateChanged` (tap toggles the bit) |
+| `Rectangle` | `back`/`on` (colour when status true), `off` (`OffBackColour`, when false; defaults to `back`), `external` (`ExternalBackColour`, default `@bg`), `fore` (border; `transparent` = none) | `Status` |
 | `Line` | `fore`, `thickness`, `orientation` (`Horizontal`/`Vertical`, inferred from w/h if omitted) | – |
 | `PictureBox` | `image` (file name) or `images` (list → ImageList), `stretch` | `Status` (index into `images`) |
 
@@ -76,7 +76,7 @@ Strings are passed through verbatim (`"GotoPage;MAIN"`, `"Exec;VR(10).0=1"`). Sh
 | `{ "set": "VR(10).0" }` / `{ "set": "VR(10).0", "value": 0 }` | `Exec;VR(10).0=1` / `=0` |
 | `{ "set": "VR(5)", "value": "VR(5)+10" }` | `Exec;VR(5)=VR(5)+10` |
 | `{ "toggle": "VR(20).1" }` | `Exec;VR(20).1=(VR(20).1 = 0)` |
-| `{ "keypad": "txtSpeed" }` | `OpenKeyPad;Numeric;txtSpeed` |
+| `{ "keypad": "txtSpeed" }` / `{ "keypad": "txtQty", "kind": "INT_NUMPAD_ENTER" }` | `OpenKeyPad;REAL_NUMPAD_ENTER;txtSpeed` / `OpenKeyPad;INT_NUMPAD_ENTER;txtQty` |
 | `{ "exec": "VR(7)=0" }` | `Exec;VR(7)=0` |
 | `{ "vs": "VR:543", "value": 1 }` | `VS;VR:543;1` |
 
@@ -90,12 +90,12 @@ Composite patterns. All take `x, y, w, h` and optional `name` (child components 
 | `navbar` | `items: [{text, page}]`, `gap`, `font`, `current` | GotoPage buttons; current page highlighted and inert |
 | `panel` | `title`, `back`, `border` | framed group with caption |
 | `lamp` | `status` (expr), `text`, `on` (`@ok`), `off` (`@off`), `fore`, `border` | Rectangle with Status binding + centred Label |
-| `numeric` | `label`, `bind` (VR), `units`, `format` (`real`), `dp` (2), `labelW`, `unitsW`, `valueFont` | caption + keypad TextBox + units |
+| `numeric` | `label`, `bind` (VR), `units`, `format` (`real`), `dp` (2), `min`, `max`, `labelW`, `unitsW`, `valueFont` | caption + keypad TextBox + units |
 | `readout` | same as numeric, plus `fore`, `back` | caption + live read-only Label + units |
 | `command` | `text`, `set` (target), `value` (1), `back`, `fore`, `onClick` (extra actions) | one-shot command button |
 | `toggle` | `text`, `bit`, `on`, `off`, `lampH` (10) | latching button + state strip underneath |
 | `momentary` | `text`, `bit`, `lamp` (true), `on` | hold-to-run button: ButtonDown → 1, ButtonUp → 0 |
-| `stepper` | `bind` (VR), `step` (1), `format` (`integer`), `dp` | `[-]` keypad box `[+]` |
+| `stepper` | `bind` (VR), `step` (1), `format` (`integer`), `dp`, `min`, `max` (keypad only; clamp ± in the controller) | `[-]` keypad box `[+]` |
 | `alarm` | `when` (expr), `text`, `back` (`@alarm`) | banner visible only while `when` is true |
 
 ## Simulation (`sim`) — preview only

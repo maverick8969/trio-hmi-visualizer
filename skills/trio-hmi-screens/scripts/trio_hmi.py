@@ -24,6 +24,8 @@ from collections import OrderedDict
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUNTIME_DIR = os.path.join(SKILL_DIR, "assets", "runtime")
 TGD_NS = "triomotion:hmi:tgd"
+# Version stamped by Motion Perfect's HMI designer on the reference Line 2 project.
+DESIGNER_VERSION = "2.4.3.2913"
 
 # --------------------------------------------------------------------------
 # Trio component / property vocabulary
@@ -58,11 +60,17 @@ PROP_TYPES = {
     "Image": "System.Drawing.Image", "ImageList": "System.Drawing.Image[]",
     "ImageSmartStretch": T_BOOL, "Thickness": T_INT,
     "Orientation": "System.Windows.Forms.Orientation",
+    "MinVal": "System.Double", "MaxVal": "System.Double",
+    "TextAlignment": "System.Drawing.ContentAlignment",
 }
+# Keypad kinds used by Motion Perfect (OpenKeyPad;<kind>;<TextBox name>)
+KEYPAD_KINDS = {"REAL_NUMPAD_ENTER", "INT_NUMPAD_ENTER", "INT_NUMPAD_ENTER_123"}
+# write_event Motion Perfect puts on ReadWrite bindings, per property
+WRITE_EVENTS = {"Text": "LostFocus", "Checked": "CheckStateChanged", "SelectedRow": "SelectedRowChanged"}
 TEXTALIGN_TYPE = {
     "TVBTextBox": "System.Windows.Forms.HorizontalAlignment",  # Left / Center / Right
 }
-STATUS_TYPE = {"TVBRectangle": T_BOOL, "TVBPictureBox": T_INT}
+STATUS_TYPE = {"TVBRectangle": T_INT, "TVBPictureBox": T_INT}
 
 CONTENT_ALIGN = {"TopLeft", "TopCenter", "TopRight", "MiddleLeft", "MiddleCenter",
                  "MiddleRight", "BottomLeft", "BottomCenter", "BottomRight"}
@@ -250,7 +258,7 @@ def build_action(a):
             raise SpecError("set target must be VR(n) or VR(n).bit, got %r" % t)
         return "Exec;%s=%s" % (t, a.get("value", 1))
     if "keypad" in a:
-        return "OpenKeyPad;%s;%s" % (a.get("kind", "Numeric"), a["keypad"])
+        return "OpenKeyPad;%s;%s" % (a.get("kind", "REAL_NUMPAD_ENTER"), a["keypad"])
     if "exec" in a:
         return "Exec;%s" % a["exec"]
     if "vs" in a:
@@ -287,7 +295,10 @@ class Comp:
                 default = {T_BOOL: False, T_INT: 0}.get(
                     PROP_TYPES.get(prop) or (STATUS_TYPE.get(self.tvb) if prop == "Status" else None), "")
             self.set(prop, default)
-        self.props[prop][2] = {"mcsource": mcsource, "mode": mode}
+        b = {"mcsource": mcsource, "mode": mode}
+        if mode == "ReadWrite" and prop in WRITE_EVENTS:
+            b["writeEvent"] = WRITE_EVENTS[prop]
+        self.props[prop][2] = b
 
     def on(self, event, actions):
         self.events.setdefault(event, []).extend(actions)
@@ -383,11 +394,17 @@ class PageBuilder:
                 comp.set("FormatWidth", int(c["width"]))
         if tvb == "TVBTextBox":
             comp.set("BorderStyle", c.get("border", "FixedSingle"))
+            ha = comp.props.get("TextAlign", [None, "Right"])[1]
+            comp.set("TextAlignment", {"Left": "TopLeft", "Center": "TopCenter", "Right": "TopRight"}.get(ha, "TopRight"))
+            if c.get("min") is not None:
+                comp.set("MinVal", float(c["min"]))
+            if c.get("max") is not None:
+                comp.set("MaxVal", float(c["max"]))
         if tvb == "TVBCheckBox":
             comp.set("Checked", bool(c.get("checked", False)))
         if tvb == "TVBRectangle":
-            if "off" in c:
-                comp.set("OffBackColour", th.color(c["off"]))
+            comp.set("OffBackColour", th.color(c.get("off", back)))
+            comp.set("ExternalBackColour", th.color(c.get("external", "@bg")))
             if "on" in c:
                 comp.set("BackColor", th.color(c["on"]))
         if tvb == "TVBLine":
@@ -439,7 +456,9 @@ class PageBuilder:
         # Editable textbox: open the numeric keypad on touch (as Motion Perfect does)
         if tvb == "TVBTextBox" and comp.props.get("Text", [0, 0, None])[2] and \
                 comp.props["Text"][2]["mode"] == "ReadWrite" and c.get("keypad", True) and "Click" not in comp.events:
-            comp.on("Click", ["OpenKeyPad;Numeric;%s" % comp.name])
+            fmt = comp.props.get("FormatType", [None, "FORMAT_REAL"])[1]
+            kind = c.get("keypadKind") or ("INT_NUMPAD_ENTER" if fmt == "FORMAT_INTEGER" else "REAL_NUMPAD_ENTER")
+            comp.on("Click", ["OpenKeyPad;%s;%s" % (kind, comp.name)])
 
         self.comps.append(comp)
         return comp
@@ -554,7 +573,7 @@ def w_numeric(page, c):
                     "text": c.get("label", ""), "font": c.get("font", {"size": 18}), "fore": "@text"})
     page.primitive({"type": "TextBox", "name": n, "x": x + lw, "y": y, "w": w - lw - uw, "h": h,
                     "bind": c["bind"], "mode": "ReadWrite", "format": c.get("format", "real"),
-                    "dp": c.get("dp", 2), "font": c.get("valueFont", {"size": 22}), "align": "Right"})
+                    "dp": c.get("dp", 2), "font": c.get("valueFont", {"size": 22}), "align": "Right", "min": c.get("min"), "max": c.get("max")})
     if uw:
         page.primitive({"type": "Label", "name": n + "_units", "x": x + w - uw + 6, "y": y, "w": uw - 6, "h": h,
                         "text": c["units"], "font": {"size": 16}, "fore": "@muted"})
@@ -626,7 +645,7 @@ def w_stepper(page, c):
                     "font": {"size": 26, "bold": True}, "onClick": [{"set": c["bind"], "value": "%s-%s" % (c["bind"], step)}]})
     page.primitive({"type": "TextBox", "name": n, "x": x + bw + 6, "y": y, "w": w - 2 * bw - 12, "h": h,
                     "bind": c["bind"], "mode": "ReadWrite", "format": c.get("format", "integer"),
-                    "dp": c.get("dp", 0), "align": "Center", "font": {"size": 22}})
+                    "dp": c.get("dp", 0), "align": "Center", "font": {"size": 22}, "min": c.get("min"), "max": c.get("max")})
     page.primitive({"type": "Button", "name": n + "_inc", "x": x + w - bw, "y": y, "w": bw, "h": h, "text": "+",
                     "font": {"size": 26, "bold": True}, "onClick": [{"set": c["bind"], "value": "%s+%s" % (c["bind"], step)}]})
 
@@ -659,15 +678,17 @@ def z_rank(c):
 
 def serialize_page(page_name, comps, width, height, back, refresh=250, title=None):
     L = ['<?xml version="1.0" encoding="utf-8"?>',
-         '<TGD VerMajor="1" VerMinor="1" xmlns="%s">' % TGD_NS,
+         '<TGD VerMajor="1" VerMinor="1" MinClientVersion="%s" DesignerVersion="%s" xmlns="%s">' % (
+             DESIGNER_VERSION, DESIGNER_VERSION, TGD_NS),
          "  <form>", "    <top>0</top>", "    <left>0</left>",
          "    <width>%d</width>" % width, "    <height>%d</height>" % height,
          "    <backcolor>%s</backcolor>" % back,
          "    <bindingrefreshperiod>%d</bindingrefreshperiod>" % refresh,
          "    <component>", "      <type>Trio.HMIComponents.Editor.HMIEditorControl</type>",
-         "      <name>%s</name>" % xml_esc(page_name), "      <properties>"]
+         "      <name>Page</name>", "      <properties>"]
     L += _prop_xml("BackColor", T_COLOR, back, None, "        ")
     L += _prop_xml("BindingRefreshPeriod", T_INT, refresh, None, "        ")
+    L += _prop_xml("ImageSmartStretch", T_BOOL, True, None, "        ")
     L += ["      </properties>", "    </component>", "  </form>", "  <components>"]
     ordered = sorted(enumerate(comps), key=lambda ic: (z_rank(ic[1]), -ic[0]))
     for _, c in ordered:
@@ -692,6 +713,8 @@ def serialize_page(page_name, comps, width, height, back, refresh=250, title=Non
 def _prop_xml(name, typ, val, binding, ind):
     if isinstance(val, bool):
         sval = fmt_bool(val)
+    elif isinstance(val, float):
+        sval = ("%g" % val)
     elif isinstance(val, list):
         sval = None
     else:
@@ -702,13 +725,18 @@ def _prop_xml(name, typ, val, binding, ind):
         L.append(ind + '    <array dims="%d">' % len(val))
         L += [ind + '      <element index="%d">%s</element>' % (i, xml_esc(v)) for i, v in enumerate(val)]
         L += [ind + "    </array>", ind + "  </value>"]
-    elif typ == T_STR and (sval != sval.strip() or sval == ""):
+    elif typ == T_STR and sval == "":
+        L.append(ind + "  <value />")
+    elif typ == T_FONT or (typ == T_STR and sval != sval.strip()):
         L.append(ind + '  <value xml:space="preserve">%s</value>' % sval)
     else:
         L.append(ind + "  <value>%s</value>" % sval)
     if binding:
         L += [ind + "  <binding>", ind + "    <mcsource>%s</mcsource>" % xml_esc(binding["mcsource"]),
-              ind + "    <mode>%s</mode>" % binding["mode"], ind + "  </binding>"]
+              ind + "    <mode>%s</mode>" % binding["mode"]]
+        if binding.get("writeEvent"):
+            L.append(ind + "    <write_event>%s</write_event>" % binding["writeEvent"])
+        L.append(ind + "  </binding>")
     L.append(ind + "</property>")
     return L
 
@@ -791,7 +819,8 @@ def validate_pages(pages, min_touch=40):
                 if b["mode"] not in ("ReadOnly", "ReadWrite"):
                     errors.append("%s.%s: binding mode %r must be ReadOnly or ReadWrite" % (tag, pname, b["mode"]))
                 if b["mode"] == "ReadWrite" and not writable:
-                    errors.append("%s.%s: ReadWrite binding to non-writable expression %r" % (tag, pname, b["mcsource"]))
+                    warnings.append("%s.%s: ReadWrite binding to expression %r; the preview cannot write it back "
+                                    "(bind a plain VR(n) for a simple input)" % (tag, pname, b["mcsource"]))
                 if b["mode"] == "ReadWrite":
                     is_input = True
                 if kind == "custom":
@@ -808,11 +837,20 @@ def validate_pages(pages, min_touch=40):
                             "%s: GotoPage target %r is not among the loaded pages" % (tag, detail))
                     elif kind == "OpenKeyPad" and detail and detail not in [cc["name"] for cc in p["components"]]:
                         errors.append("%s: OpenKeyPad target %r does not exist on page %s" % (tag, detail, P))
+                    elif kind == "OpenKeyPad" and detail and detail != c["name"] and c["type"] == "TVBTextBox":
+                        warnings.append("%s: tapping it opens the keypad for %s, so it edits that box's value "
+                                        "(copy-paste slip?)" % (tag, detail))
+                    elif kind == "OpenKeyPad" and a.split(";")[1] not in KEYPAD_KINDS:
+                        warnings.append("%s: keypad kind %r is not one Motion Perfect uses (%s)" % (
+                            tag, a.split(";")[1], ", ".join(sorted(KEYPAD_KINDS))))
                     elif not ok:
                         warnings.append("%s: action %r will not be simulated by the preview" % (tag, a))
                 is_input = is_input or bool(acts)
+            vis = c["props"].get("Visible", {})
+            toggles_visibility = bool(vis.get("binding")) or vis.get("value") == "False"
             if is_input:
-                interactive.append((tag, x, y, w, h))
+                if not toggles_visibility:  # hidden/alternating controls may share a spot
+                    interactive.append((tag, x, y, w, h))
                 if w < min_touch or h < min_touch:
                     warnings.append("%s: touch target %dx%d is smaller than %dpx" % (tag, w, h, min_touch))
         for i in range(len(interactive)):
@@ -1005,8 +1043,10 @@ def cmd_build(args):
 
     startup = proj.get("startup", pages[0]["name"])
     if args.tgm:
-        tgm = ['<?xml version="1.0" encoding="utf-8"?>', "<TGM>",
-               '  <Device StartupPage="%s" ScreenResolution="%d,%d">' % (startup, proj["width"], proj["height"]),
+        tgm = ['<?xml version="1.0" encoding="utf-8"?>', '<TGM VerMajor="1" VerMinor="0">',
+               '  <Device MinClientVersion="%s" DesignerVersion="%s" LegacyTextBoxMode="False" '
+               'ScreenResolution="%d,%d" StartupPage="%s">' % (DESIGNER_VERSION, DESIGNER_VERSION,
+                                                              proj["width"], proj["height"], startup),
                "    <Pages>"] + ['      <Page File="%s" />' % p["file"] for p in pages] + \
               ["    </Pages>", "    <Images />", "  </Device>", "</TGM>", ""]
         with open(os.path.join(args.out, proj["name"] + ".TGM"), "w", encoding="utf-8") as fh:
