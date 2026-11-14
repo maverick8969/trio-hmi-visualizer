@@ -130,6 +130,37 @@ function parseBinding(mcsource) {
 }
 
 /**
+ * Translate a Trio BASIC-style expression into a JS function (store) -> number.
+ * Supports VR(n), VR(n).bit, VR:n, numbers, + - * / ( ), MOD,
+ * comparisons (= <> < > <= >=), AND / OR / NOT, TRUE / FALSE.
+ * Comparisons yield 1 / 0 like Trio BASIC (TRUE is -1 on the controller,
+ * but every consumer here only tests truthiness).
+ */
+function compileExpression(src) {
+  let expr = String(src)
+    .replace(/VR\((\d+)\)\.(\d+)/g, (_, i, b) => `s.getVRBit(${i},${b})`)
+    .replace(/VR[:(](\d+)\)?/g, (_, i) => `s.getVR(${i})`)
+    .replace(/\bAND\b/gi, '&&')
+    .replace(/\bOR\b/gi, '||')
+    .replace(/\bNOT\b/gi, '!')
+    .replace(/\bMOD\b/gi, '%')
+    .replace(/\bTRUE\b/gi, '1')
+    .replace(/\bFALSE\b/gi, '0')
+    .replace(/<>/g, '!=')
+    .replace(/(?<![<>=!])=(?!=)/g, '==');
+  // Only allow the characters we generated — never evaluate arbitrary code
+  const stripped = expr.replace(/s\.getVR(Bit)?\(\d+(,\d+)?\)/g, '');
+  if (/[^\d\s.+\-*/%()<>=!&|]/.test(stripped)) {
+    throw new Error('Unsupported expression: ' + src);
+  }
+  const fn = Function('s', '"use strict"; return (' + expr + ');');
+  return (store) => {
+    const v = fn(store);
+    return typeof v === 'boolean' ? (v ? 1 : 0) : v;
+  };
+}
+
+/**
  * Parse boolean/comparison expressions.
  */
 function parseBooleanExpression(src) {
@@ -140,28 +171,13 @@ function parseBooleanExpression(src) {
     vrRefs.push(parseInt(match[1]));
   }
 
+  let compiled = null;
+  try { compiled = compileExpression(src); } catch (e) { /* evaluates to 0 */ }
+
   return {
     evaluate: (store) => {
       try {
-        // Replace VR(n) with actual values
-        let expr = src.replace(/VR\((\d+)\)\.(\d+)/g, (_, idx, bit) => {
-          return String(store.getVRBit(parseInt(idx), parseInt(bit)));
-        });
-        expr = expr.replace(/VR\((\d+)\)/g, (_, idx) => {
-          return String(store.getVR(parseInt(idx)));
-        });
-        // Replace operators for JS evaluation
-        expr = expr.replace(/\bAND\b/g, '&&');
-        expr = expr.replace(/\bOR\b/g, '||');
-        expr = expr.replace(/\bNOT\b/g, '!');
-        expr = expr.replace(/\bfalse\b/gi, '0');
-        expr = expr.replace(/\btrue\b/gi, '1');
-        // Replace = with == (but not ==)
-        expr = expr.replace(/(?<!=)=(?!=)/g, '==');
-        // Replace <> with !=
-        expr = expr.replace(/<>/g, '!=');
-        // Evaluate
-        return Function('"use strict"; return (' + expr + ')')() ? 1 : 0;
+        return compiled && compiled(store) ? 1 : 0;
       } catch (e) {
         return 0;
       }

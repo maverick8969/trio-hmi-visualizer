@@ -1,0 +1,128 @@
+{
+  "project": { "name": "DemoCell", "width": 1024, "height": 600, "startup": "MAIN" },
+  "theme": { "base": "dark" },
+
+  "vars": {
+    "VR(10)":   "Command word (HMI -> controller, one-shot bits)",
+    "VR(10).0": "START",
+    "VR(10).1": "STOP",
+    "VR(10).2": "RESET",
+    "VR(11)":   "Status word (controller -> HMI)",
+    "VR(11).0": "RUNNING",
+    "VR(11).1": "FAULT",
+    "VR(11).2": "HOMED",
+    "VR(12)":   "Jog word",
+    "VR(12).0": "JOG+",
+    "VR(12).1": "JOG-",
+    "VR(12).2": "HOME",
+    "VR(20)":   "Options",
+    "VR(20).0": "Vacuum",
+    "VR(20).1": "Coolant",
+    "VR(20).2": "Auto-restart",
+    "VR(50)":   "Alarms",
+    "VR(50).0": "Drive fault",
+    "VR(100)":  "Speed setpoint (mm/s)",
+    "VR(101)":  "Actual speed (mm/s)",
+    "VR(102)":  "Axis 0 position (mm)",
+    "VR(103)":  "Jog speed (mm/s)",
+    "VR(104)":  "Part count",
+    "VR(105)":  "Batch size",
+    "VR(106)":  "Dwell time (ms)"
+  },
+
+  "nav": {
+    "x": 16, "y": 528, "w": 992, "h": 60,
+    "items": [
+      { "text": "MAIN", "page": "MAIN" },
+      { "text": "JOG", "page": "JOG" },
+      { "text": "SETUP", "page": "SETUP" }
+    ]
+  },
+
+  "pages": [
+    {
+      "name": "MAIN",
+      "components": [
+        { "widget": "header", "text": "Demo Cell — Overview", "status": { "text": "Trio MC" } },
+
+        { "widget": "panel", "name": "pnlMachine", "x": 16, "y": 68, "w": 480, "h": 448, "title": "MACHINE" },
+        { "widget": "lamp", "name": "lmpRun",   "x": 32,  "y": 104, "w": 140, "h": 44, "status": "VR(11).0", "text": "RUNNING", "on": "@ok" },
+        { "widget": "lamp", "name": "lmpFault", "x": 188, "y": 104, "w": 140, "h": 44, "status": "VR(11).1", "text": "FAULT",   "on": "@alarm" },
+        { "widget": "lamp", "name": "lmpHomed", "x": 344, "y": 104, "w": 136, "h": 44, "status": "VR(11).2", "text": "HOMED",   "on": "@accent" },
+
+        { "widget": "command", "name": "btnStart", "x": 32,  "y": 164, "w": 140, "h": 84, "text": "START", "set": "VR(10).0", "back": "@ok", "fore": "#FFFFFF" },
+        { "widget": "command", "name": "btnStop",  "x": 188, "y": 164, "w": 140, "h": 84, "text": "STOP",  "set": "VR(10).1", "back": "@alarm", "fore": "#FFFFFF" },
+        { "widget": "command", "name": "btnReset", "x": 344, "y": 164, "w": 136, "h": 84, "text": "RESET", "set": "VR(10).2", "back": "@warn", "fore": "#1B1B1B" },
+
+        { "widget": "toggle", "name": "tglVacuum",  "x": 32,  "y": 268, "w": 216, "h": 80, "text": "VACUUM",  "bit": "VR(20).0" },
+        { "widget": "toggle", "name": "tglCoolant", "x": 264, "y": 268, "w": 216, "h": 80, "text": "COOLANT", "bit": "VR(20).1" },
+
+        { "widget": "alarm", "name": "almFault", "x": 32, "y": 368, "w": 448, "h": 56, "when": "VR(11).1", "text": "DRIVE FAULT — press RESET" },
+        { "type": "Label", "x": 32, "y": 440, "w": 448, "h": 60, "text": "START needs no active fault. Batch stops automatically unless auto-restart is enabled on SETUP.", "font": { "size": 15 }, "fore": "@muted", "align": "TopLeft" },
+
+        { "widget": "panel", "name": "pnlProcess", "x": 512, "y": 68, "w": 496, "h": 448, "title": "PROCESS" },
+        { "widget": "numeric", "name": "txtSpeed",  "x": 528, "y": 108, "w": 464, "h": 52, "label": "Speed setpoint", "bind": "VR(100)", "units": "mm/s", "dp": 1 },
+        { "widget": "readout", "name": "lblActual", "x": 528, "y": 172, "w": 464, "h": 52, "label": "Actual speed",   "bind": "VR(101)", "units": "mm/s", "dp": 1 },
+        { "widget": "readout", "name": "lblPos",    "x": 528, "y": 236, "w": 464, "h": 52, "label": "Position",       "bind": "VR(102)", "units": "mm", "dp": 2 },
+        { "widget": "readout", "name": "lblCount",  "x": 528, "y": 300, "w": 464, "h": 52, "label": "Part count",     "bind": "VR(104)", "units": "pcs", "format": "integer" },
+        { "widget": "numeric", "name": "txtBatch",  "x": 528, "y": 364, "w": 464, "h": 52, "label": "Batch size",     "bind": "VR(105)", "units": "pcs", "format": "integer" }
+      ]
+    },
+    {
+      "name": "JOG",
+      "components": [
+        { "widget": "header", "text": "Jog — Axis 0" },
+
+        { "widget": "panel", "name": "pnlJog", "x": 16, "y": 68, "w": 600, "h": 448, "title": "AXIS 0" },
+        { "widget": "readout", "name": "lblJogPos", "x": 32, "y": 104, "w": 568, "h": 60, "label": "Position", "bind": "VR(102)", "units": "mm", "dp": 3, "valueFont": { "size": 28, "bold": true } },
+        { "widget": "momentary", "name": "btnJogNeg", "x": 32,  "y": 180, "w": 276, "h": 128, "text": "◀  JOG −", "bit": "VR(12).1", "font": { "size": 26, "bold": true } },
+        { "widget": "momentary", "name": "btnJogPos", "x": 324, "y": 180, "w": 276, "h": 128, "text": "JOG +  ▶", "bit": "VR(12).0", "font": { "size": 26, "bold": true } },
+        { "widget": "numeric", "name": "txtJogSpeed", "x": 32, "y": 324, "w": 568, "h": 52, "label": "Jog speed", "bind": "VR(103)", "units": "mm/s", "dp": 1 },
+        { "widget": "command", "name": "btnHome", "x": 32, "y": 400, "w": 276, "h": 96, "text": "HOME", "set": "VR(12).2" },
+        { "widget": "lamp", "name": "lmpJogHomed", "x": 324, "y": 426, "w": 276, "h": 44, "status": "VR(11).2", "text": "HOMED", "on": "@accent" },
+
+        { "widget": "panel", "name": "pnlInterlock", "x": 632, "y": 68, "w": 376, "h": 448, "title": "INTERLOCKS" },
+        { "widget": "lamp", "name": "lmpJogBlocked", "x": 648, "y": 104, "w": 344, "h": 52, "status": "VR(11).0", "text": "RUNNING — JOG DISABLED", "on": "#B45309" },
+        { "type": "Label", "x": 648, "y": 172, "w": 344, "h": 90, "text": "Jog buttons are hold-to-run. Release stops motion. Jog is ignored while the machine is running.", "font": { "size": 16 }, "fore": "@muted", "align": "TopLeft" }
+      ]
+    },
+    {
+      "name": "SETUP",
+      "components": [
+        { "widget": "header", "text": "Setup" },
+
+        { "widget": "panel", "name": "pnlRecipe", "x": 16, "y": 68, "w": 496, "h": 448, "title": "RECIPE" },
+        { "widget": "numeric", "name": "txtDwell", "x": 32, "y": 108, "w": 464, "h": 52, "label": "Dwell time", "bind": "VR(106)", "units": "ms", "format": "integer" },
+        { "type": "Label", "x": 32, "y": 176, "w": 200, "h": 56, "text": "Batch size", "font": { "size": 18 } },
+        { "widget": "stepper", "name": "stpBatch", "x": 240, "y": 176, "w": 256, "h": 56, "bind": "VR(105)", "step": 10 },
+        { "type": "CheckBox", "name": "chkAuto", "x": 32, "y": 256, "w": 400, "h": 44, "text": "Auto-restart after batch", "bind": "VR(20).2" },
+
+        { "widget": "panel", "name": "pnlDiag", "x": 528, "y": 68, "w": 480, "h": 448, "title": "DIAGNOSTICS" },
+        { "widget": "readout", "name": "lblCmdWord",  "x": 544, "y": 108, "w": 448, "h": 52, "label": "Command word VR(10)", "bind": "VR(10)", "format": "integer", "labelW": 260 },
+        { "widget": "readout", "name": "lblStatWord", "x": 544, "y": 172, "w": 448, "h": 52, "label": "Status word VR(11)",  "bind": "VR(11)", "format": "integer", "labelW": 260 },
+        { "widget": "command", "name": "btnFault", "x": 544, "y": 248, "w": 216, "h": 72, "text": "SIMULATE FAULT", "set": "VR(50).0", "back": "@alarm", "fore": "#FFFFFF", "font": { "size": 16, "bold": true } },
+        { "widget": "lamp", "name": "lmpDiagFault", "x": 776, "y": 262, "w": 216, "h": 44, "status": "VR(50).0", "text": "DRIVE FAULT", "on": "@alarm" }
+      ]
+    }
+  ],
+
+  "sim": {
+    "tick": 100,
+    "init": { "VR(100)": 50, "VR(103)": 10, "VR(105)": 20, "VR(106)": 250 },
+    "rules": [
+      { "if": "VR(50).0 = 1", "set": { "VR(11).1": 1, "VR(11).0": 0 } },
+      { "if": "VR(10).0 = 1", "set": { "VR(11).0": "VR(11).1 = 0", "VR(10).0": 0 } },
+      { "if": "VR(10).1 = 1", "set": { "VR(11).0": 0, "VR(10).1": 0 } },
+      { "if": "VR(10).2 = 1", "set": { "VR(11).1": 0, "VR(50).0": 0, "VR(104)": 0, "VR(10).2": 0 } },
+      { "if": "VR(11).0 = 1", "set": { "VR(101)": "VR(101) + (VR(100) - VR(101)) * 0.25" } },
+      { "if": "VR(11).0 = 0", "set": { "VR(101)": "VR(101) * 0.6 * (VR(101) > 0.05)" } },
+      { "set": { "VR(102)": "VR(102) + VR(101) * 0.1" } },
+      { "if": "VR(11).0 = 1", "every": 1000, "set": { "VR(104)": "VR(104) + 1" } },
+      { "if": "VR(104) >= VR(105) AND VR(105) > 0 AND VR(20).2 = 1", "set": { "VR(104)": 0 } },
+      { "if": "VR(104) >= VR(105) AND VR(105) > 0", "set": { "VR(11).0": 0 } },
+      { "if": "VR(12).0 = 1 AND VR(11).0 = 0", "set": { "VR(102)": "VR(102) + VR(103) * 0.1" } },
+      { "if": "VR(12).1 = 1 AND VR(11).0 = 0", "set": { "VR(102)": "VR(102) - VR(103) * 0.1" } },
+      { "if": "VR(12).2 = 1", "set": { "VR(102)": 0, "VR(11).2": 1, "VR(12).2": 0 } }
+    ]
+  }
+}

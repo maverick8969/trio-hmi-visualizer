@@ -30,6 +30,27 @@ Open `index.html` in any modern browser, or run `./start.sh`.
 4. Use the **VR Simulation** panel to change register values and see bindings update live
 5. Click **Export TGD** to download the modified screen file
 
+## Claude Code skill: generate HMI screens
+
+`skills/trio-hmi-screens/` is a portable [Claude Code skill](https://code.claude.com/docs/en/skills) that lets Claude design Trio HMI screens in any repository. From a short JSON spec it generates:
+
+- `<PAGE>.TGD` files for Motion Perfect,
+- `preview.html` — a single-file simulator (same rendering engine as this visualizer) with working buttons, hold-to-run jog, keypad entry, page navigation, a live VR panel and simulated controller rules,
+- `VR_MAP.md` — every VR the HMI reads and writes, for the controller programmer.
+
+**Install in another repo:** copy the folder to `<repo>/.claude/skills/trio-hmi-screens/` (or `~/.claude/skills/` for all projects), then ask Claude e.g. *"make a Trio HMI with a run page, jog page and recipe setup"*.
+
+**Use without Claude:**
+
+```bash
+python3 skills/trio-hmi-screens/scripts/trio_hmi.py build skills/trio-hmi-screens/assets/examples/demo-cell.json -o out
+python3 skills/trio-hmi-screens/scripts/trio_hmi.py preview path/to/*.TGD -o preview.html   # existing screens
+python3 skills/trio-hmi-screens/scripts/trio_hmi.py validate path/to/project/
+node skills/trio-hmi-screens/scripts/check_preview.cjs out/preview.html --shots out/shots  # needs Playwright
+```
+
+The skill vendors this visualizer's runtime under `assets/runtime/`; run `tools/sync-skill-runtime.sh` after changing files in `js/`.
+
 ## What is a TGD file?
 
 `.TGD` files are XML-based screen definitions used by **Trio Motion Technology** controllers. Each `.TGD` represents one HMI screen page, while a `.TGM` file is the project manifest.
