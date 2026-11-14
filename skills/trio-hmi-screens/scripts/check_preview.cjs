@@ -20,7 +20,9 @@ const fs = require('fs');
 
 let chromium;
 try { ({ chromium } = require('playwright')); } catch (e) {
-  console.error('playwright is not available: ' + e.message);
+  console.error('Playwright is not installed. Install it in this repo, then re-run:\n' +
+    '  npm i -D playwright && npx playwright install chromium\n' +
+    '(Linux without browser system libraries: npx playwright install --with-deps chromium)');
   process.exit(2);
 }
 

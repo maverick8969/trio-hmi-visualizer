@@ -49,6 +49,8 @@ python3 skills/trio-hmi-screens/scripts/trio_hmi.py validate path/to/project/
 node skills/trio-hmi-screens/scripts/check_preview.cjs out/preview.html --shots out/shots  # needs Playwright
 ```
 
+The interaction check needs Playwright: run `npm install` in this repo (installs the pinned `playwright` dev dependency and its Chromium), then `npm run check:demo`.
+
 The skill vendors this visualizer's runtime under `assets/runtime/`; run `tools/sync-skill-runtime.sh` after changing files in `js/`.
 
 ## What is a TGD file?

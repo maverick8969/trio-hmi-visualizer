@@ -1,0 +1,15 @@
+{
+  "name": "trio-hmi-visualizer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-based visualizer and editor for Trio Motion HMI screen files (.TGD / .TGM)",
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "playwright install chromium",
+    "demo": "python3 skills/trio-hmi-screens/scripts/trio_hmi.py build skills/trio-hmi-screens/assets/examples/demo-cell.json -o out/demo",
+    "check:demo": "npm run demo && node skills/trio-hmi-screens/scripts/check_preview.cjs out/demo/preview.html --shots out/demo/shots"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

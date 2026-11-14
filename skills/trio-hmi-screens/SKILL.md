@@ -35,11 +35,11 @@ Everything lives in this skill's directory (`SKILL_DIR` below = the folder conta
    ```
    Fix every `SPEC ERROR` / `ERROR`. Treat warnings as review items (touch targets < 40 px, overlapping inputs, off-screen components, actions the preview can't simulate). Add `--tgm` for a minimal project manifest stub.
 
-5. **Verify** — do not skip. If Playwright is available (`node -e "require('playwright')"`):
+5. **Verify** — do not skip. Check for Playwright with `node -e "require('playwright')"`. If it is missing, install it as a dev dependency (`npm i -D playwright && npx playwright install chromium`; on bare Linux add `--with-deps`) — ask first if the repo has no `package.json` or the user may not want new dependencies. Then:
    ```bash
    node SKILL_DIR/scripts/check_preview.cjs hmi/out/preview.html --shots hmi/out/shots
    ```
-   It presses every button, enters a value in every input, reports dead buttons / broken keypads / JS errors, and screenshots each page. **Look at the screenshots** for clipped text, overlaps, low contrast and alignment. Iterate on the spec until clean. Without Playwright, open `preview.html` in a browser and tell the user you could not run the automated check.
+   It presses every button, enters a value in every input, reports dead buttons / broken keypads / JS errors, and screenshots each page. **Look at the screenshots** for clipped text, overlaps, low contrast and alignment. Iterate on the spec until clean. If Playwright can't be installed (offline, no Node), open `preview.html` in a browser and tell the user the automated check did not run.
 
 6. **Deliver**: list the TGD files, `preview.html` (open it in any browser — no server needed) and `VR_MAP.md`. Remind the user to add the TGD pages to their Motion Perfect HMI project and confirm they open in the HMI designer before deploying to a machine (see Fidelity below).
 

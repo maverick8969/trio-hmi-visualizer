@@ -4,3 +4,5 @@ Thumbs.db
 *.swo
 *~
 __pycache__/
+node_modules/
+out/
