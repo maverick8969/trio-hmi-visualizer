@@ -10,8 +10,10 @@ repo's own `.BAS` code, check VR outputs, and screenshot the HMI.
    marketplace and enables the `trio-sim` plugin for everyone who opens the repo.
 2. Append `CLAUDE.md.snippet` to the Line 2 repo's `CLAUDE.md` (create it if missing). That tells agents
    *when* to run the sim, not just how.
-3. Optional: add `sim/scenarios.json` in the Line 2 repo with line-specific regression scenarios
-   (format in `skills/trio-sim/SKILL.md`).
+3. Add `sim/scenarios.json` (the Line 2 regression scenarios) and `sim/docs/` (I/O map, behavior
+   spec, QA report, simulator notes) to the Line 2 repo. These lived in this repo until v0.2.0 and
+   were moved out because this repo is public; `--scenario all` now reads `sim/scenarios.json` from
+   the project, so the Line 2 repo must have it. Format: `skills/trio-sim/SKILL.md`.
 4. Commit and push.
 
 The first time someone opens the Line 2 repo in Claude Code, they're asked to trust the marketplace
@@ -39,7 +41,17 @@ unfinished simulator changes:
 
 To upgrade: bump `version` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` here,
 tag the release (`git tag v0.2.0 && git push origin v0.2.0`), then change `ref` in the Line 2 repo.
+Moving the Line 2 repo to v0.2.0 or later requires step 3 first (its scenarios are no longer built in).
 For CI, pass the same tag as `ref:` on the `actions/checkout` step that fetches this repo.
+
+## Running this repo's engine tests against Line 2
+
+The Line 2 code is not stored here. Engine tests that exercise real Line 2 behavior read it from a
+checkout and report SKIP without one:
+
+```bash
+TRIO_LINE2_DIR=/path/to/line2 npm test
+```
 
 ## CI without Claude
 

@@ -13,7 +13,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { loadProject, makeSim, DEFAULT_BAS_DIR, ROOT } = require('./lib/sim-node.js');
+const { loadProject, loadProjectScenarios, makeSim, DEFAULT_BAS_DIR, ROOT } = require('./lib/sim-node.js');
 const { runScenario, resolveWhat, compare, BUILTINS } = require(path.join(ROOT, 'js/sim/sim-scenarios.js'));
 
 const HELP = `trio-sim — headless Trio controller simulator
@@ -22,7 +22,8 @@ Usage: node tools/trio-sim.js [project options] [steps...] [output options]
 
 Project
   --bas <dir>            Folder holding the .BAS programs (searched recursively).
-                         Default: samples/line2 bundled with this repo.
+                         Default: samples/demo, a small synthetic project bundled
+                         with this repo. Point it at your controller repo.
   --autorun <NAME>       Override autorun program (default: manifest.json, then the
                          .mpv3prj IsAutorun entry, then START_AND_SET_VARIABLES).
 
@@ -44,15 +45,15 @@ Steps (executed left to right; a --boot is inserted automatically if omitted)
                          VR:4000-4058  VR:24  kpi (=VR:4000-4058)  globals
                          globals:<substr>  io  axes  procs  drives  heaters
                          flows  table:0-59  or any <what> expression above.
-  --scenario <x>         Run a regression scenario: all | <builtin name substring> |
-                         path/to/scenarios.json (array of {name, steps}) | .js module.
+  --scenario <x>         Run regression scenarios: all | <name substring> (both from the
+                         project's sim/scenarios.json) | path/to/file.json | .js module.
   --steps <file.json>    Run a step list ([{boot:true},{run:1000},...]) — same
                          format as js/sim/sim-scenarios.js — inline in the sequence.
 
 Modes / output
   --parse-only           Only parse the programs; report syntax errors and exit.
   --list-globals [sub]   Boot (+fast-boot) and list named globals → VR index/value.
-  --list-scenarios       List built-in scenario names.
+  --list-scenarios       List the project's scenarios (from <--bas>/sim/scenarios.json).
   --snapshot <file>      Write the final state (globals, io, axes, kpi) as JSON.
   --diff <file>          Compare final state against a saved --snapshot; non-zero
                          exit if anything differs beyond --tol (default 1e-6).
@@ -244,8 +245,18 @@ function diffSnapshots(base, cur, tol) {
 }
 
 // ---------------- scenario loading ----------------
-function resolveScenarios(arg) {
-  if (arg === 'all' || arg === 'builtin') return BUILTINS;
+function projectScenarios(dir) {
+  let found;
+  try { found = loadProjectScenarios(dir); } catch (e) { die(`bad sim/scenarios.json: ${e.message}`); }
+  return { file: found ? found.file : null, list: BUILTINS.concat(found ? found.scenarios : []) };
+}
+
+function resolveScenarios(arg, dir) {
+  const proj = projectScenarios(dir);
+  if (arg === 'all' || arg === 'builtin') {
+    if (!proj.list.length) die(`no scenarios: add sim/scenarios.json to ${dir} or pass a file to --scenario`);
+    return proj.list;
+  }
   if (/\.(json|js|cjs)$/i.test(arg)) {
     const f = path.resolve(arg);
     if (!fs.existsSync(f)) die(`scenario file not found: ${arg}`);
@@ -254,8 +265,8 @@ function resolveScenarios(arg) {
     if (!Array.isArray(x)) x = [x];
     return x;
   }
-  const hits = BUILTINS.filter(s => s.name.toLowerCase().includes(arg.toLowerCase()));
-  if (!hits.length) die(`no built-in scenario matches "${arg}". Try --list-scenarios.`);
+  const hits = proj.list.filter(s => s.name.toLowerCase().includes(arg.toLowerCase()));
+  if (!hits.length) die(`no scenario in ${proj.file || 'the project'} matches "${arg}". Try --list-scenarios.`);
   return hits;
 }
 
@@ -264,7 +275,11 @@ async function main() {
   const o = parseArgs(process.argv.slice(2));
   const emit = (obj) => process.stdout.write(JSON.stringify(obj, null, o.compact ? 0 : 2) + '\n');
 
-  if (o.mode === 'scenarios') { emit({ scenarios: BUILTINS.map(s => s.name) }); return 0; }
+  if (o.mode === 'scenarios') {
+    const proj = projectScenarios(path.resolve(o.bas || DEFAULT_BAS_DIR));
+    emit({ scenarios: proj.list.map(s => s.name), file: proj.file });
+    return 0;
+  }
 
   let project;
   try { project = loadProject(o.bas || DEFAULT_BAS_DIR, { autorun: o.autorun }); } catch (e) { die(e.message); }
@@ -305,7 +320,7 @@ async function main() {
     } else if (s.input) {
       if (s.input.value === 'clear') sim.machine.clearInForce(s.input.ch); else sim.machine.setIn(s.input.ch, +s.input.value);
     } else if (s.scenario) {
-      for (const scn of resolveScenarios(s.scenario)) {
+      for (const scn of resolveScenarios(s.scenario, project.dir)) {
         const r = await runScenario(sim, scn);
         failed += r.failed;
         results.scenarios.push({ name: r.name, ok: r.failed === 0, passed: r.passed, total: r.total, failures: r.results.filter(x => !x.ok).map(x => ({ ...x, actual: round(x.actual) })) });

@@ -60,9 +60,10 @@
     return res;
   };
 
-  // Fetch the bundled sample project (works when served over http).
+  // Fetch the bundled demo project (works when served over http). The demo is
+  // synthetic; use "Load .BAS…" for a real controller project.
   SimController.prototype.loadSample = async function (base) {
-    base = base || 'samples/line2/';
+    base = base || 'samples/demo/';
     const man = await fetch(base + 'manifest.json').then(r => r.json());
     this.autorun = (man.autorun || 'START_AND_SET_VARIABLES.BAS').replace(/\.BAS$/i, '');
     this.autorunProc = man.autorunProc || 1;
@@ -74,13 +75,18 @@
         count++; if (r.errors && r.errors.length) errFiles++;
       } catch (e) { /* skip missing */ }
     }
-    this.loadReport = { count, errFiles, source: 'bundled sample (samples/line2)' };
+    // The project's own regression scenarios, if the manifest names a file
+    // (e.g. "scenarios": "sim/scenarios.json").
+    this.scenarios = null;
+    if (man.scenarios) { try { this.scenarios = await fetch(base + man.scenarios).then(r => r.json()); } catch (e) { console.warn('scenarios not loaded', e); } }
+    this.loadReport = { count, errFiles, source: 'bundled demo (' + base + ')' };
     return this.loadReport;
   };
 
   // Load from a user-picked FileList (.BAS + optional .mpv3prj).
   SimController.prototype.loadFiles = async function (fileList) {
     let count = 0, errFiles = 0, autorun = null;
+    this.scenarios = null;
     const readText = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(f); });
     for (const f of fileList) {
       const nm = f.name;
@@ -88,6 +94,8 @@
         const text = await readText(f);
         const r = this.parseAndStore(nm.replace(/\.BAS$/i, ''), text, nm);
         count++; if (r.errors && r.errors.length) errFiles++;
+      } else if (/^scenarios\.json$/i.test(nm)) {
+        try { this.scenarios = JSON.parse(await readText(f)); } catch (e) { console.warn('bad scenarios.json', e); }
       } else if (/\.mpv3prj$/i.test(nm)) {
         const text = await readText(f);
         const m = text.match(/FileName="([^"]+\.BAS)"[^>]*Autorun="-?[1-9]/i) || text.match(/Autorun="-?[1-9][^>]*FileName="([^"]+\.BAS)"/i);
@@ -108,8 +116,8 @@
   // Load the bundled HMI screens (TGM + TGDs + images) into the visualizer app
   // so they render (and animate from vrStore) in View mode.
   SimController.prototype.loadHmiScreens = async function (base, tgmName) {
-    base = base || 'samples/line2-hmi/';
-    tgmName = tgmName || 'LINE2_HMI.TGM';
+    base = base || 'samples/demo/hmi/';
+    tgmName = tgmName || 'DemoCell.TGM';
     const man = await fetch(base + tgmName.replace(/ /g, '%20')).then(r => r.text());
     const pages = Array.from(man.matchAll(/<Page File="([^"]+)"/g)).map(m => m[1]);
     const imgs = Array.from(man.matchAll(/<Image File="([^"]+)"/g)).map(m => m[1]);

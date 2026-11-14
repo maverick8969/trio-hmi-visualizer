@@ -51,7 +51,7 @@
         <span class="sb-stat" id="sim-load" style="margin-left:auto;color:#888;"></span>
         <button id="sim-hmi" class="sb">🖥 Live HMI</button>
         <label for="sim-file" class="sb">Load .BAS…</label>
-        <input type="file" id="sim-file" multiple accept=".bas,.BAS,.mpv3prj" style="display:none">
+        <input type="file" id="sim-file" multiple accept=".bas,.BAS,.mpv3prj,.json" style="display:none">
       </div>
       <div id="sim-sys"></div>
       <div id="sim-grid">
@@ -233,7 +233,9 @@
     const host = this.rootEl.querySelector('#sim-scenarios'); host.innerHTML = '';
     if (!root.SimScenarios) { host.textContent = 'harness unavailable'; return; }
     this._scnRows = [];
-    SimScenarios.BUILTINS.forEach((scn, i) => {
+    const list = this.scenarioList();
+    if (!list.length) host.textContent = 'No scenarios: load a project with sim/scenarios.json.';
+    list.forEach((scn, i) => {
       const row = el('div', 'scn-row');
       const b = el('button', 'scn-run', '▶'); b.title = 'Run scenario';
       const name = el('span', 'scn-name', scn.name);
@@ -244,11 +246,16 @@
       this._scnRows.push({ res, name });
     });
     const all = this.rootEl.querySelector('#sim-run-all');
-    if (all) all.onclick = async () => { for (let i = 0; i < SimScenarios.BUILTINS.length; i++) await this.runScn(i); };
+    if (all) all.onclick = async () => { for (let i = 0; i < this.scenarioList().length; i++) await this.runScn(i); };
+  };
+
+  // Scenarios come from the loaded project (sim/scenarios.json), plus any built-ins.
+  SimUI.prototype.scenarioList = function () {
+    return SimScenarios.BUILTINS.concat(Array.isArray(this.sim.scenarios) ? this.sim.scenarios : []);
   };
 
   SimUI.prototype.runScn = async function (i) {
-    const scn = SimScenarios.BUILTINS[i], row = this._scnRows[i];
+    const scn = this.scenarioList()[i], row = this._scnRows[i];
     row.res.textContent = '…'; row.res.className = 'scn-res';
     const yieldFn = () => new Promise(r => requestAnimationFrame(r));
     const r = await SimScenarios.runScenario(this.sim, scn, { yield: yieldFn });

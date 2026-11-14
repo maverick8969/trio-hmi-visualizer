@@ -1,0 +1,6 @@
+{
+  "autorun": "DEMO_MAIN.BAS",
+  "autorunProc": 1,
+  "scenarios": "sim/scenarios.json",
+  "programs": ["DEMO_MAIN.BAS", "CELL_LOGIC.BAS", "JOG_LOGIC.BAS"]
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TGM VerMajor="1" VerMinor="0">
+  <Device MinClientVersion="2.4.3.2913" DesignerVersion="2.4.3.2913" LegacyTextBoxMode="False" ScreenResolution="1024,600" StartupPage="MAIN">
+    <Pages>
+      <Page File="MAIN.TGD" />
+      <Page File="JOG.TGD" />
+      <Page File="SETUP.TGD" />
+    </Pages>
+    <Images />
+  </Device>
+</TGM>

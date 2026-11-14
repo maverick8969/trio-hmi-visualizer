@@ -16,8 +16,10 @@ const { TrioRuntime } = require(path.join(ROOT, 'js/sim/trio-runtime.js'));
 const TrioMachine = require(path.join(ROOT, 'js/sim/trio-machine.js'));
 const TrioPlant = require(path.join(ROOT, 'js/sim/trio-plant.js'));
 
-const DEFAULT_BAS_DIR = path.join(ROOT, 'samples/line2');
-const DEFAULT_HMI_DIR = path.join(ROOT, 'samples/line2-hmi');
+// Bundled synthetic demo project (not a real machine). Point --bas / --hmi at a
+// real controller project, e.g. a checkout of the Line 2 repo.
+const DEFAULT_BAS_DIR = path.join(ROOT, 'samples/demo');
+const DEFAULT_HMI_DIR = path.join(ROOT, 'samples/demo/hmi');
 const DEFAULT_AUTORUN = 'START_AND_SET_VARIABLES';
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.claude', '.github']);
 
@@ -103,4 +105,16 @@ function makeSim(project, opts = {}) {
   return sim;
 }
 
-module.exports = { ROOT, DEFAULT_BAS_DIR, DEFAULT_HMI_DIR, findFiles, detectAutorun, loadProject, makeSim };
+// A project's own regression scenarios: the first sim/scenarios.json under `dir`
+// (searched a few levels deep). Returns { file, scenarios } or null.
+function loadProjectScenarios(dir) {
+  dir = path.resolve(dir || DEFAULT_BAS_DIR);
+  const hit = findFiles(dir, /^scenarios\.json$/i, 4).find(f => path.basename(path.dirname(f)).toLowerCase() === 'sim');
+  if (!hit) return null;
+  let x = JSON.parse(fs.readFileSync(hit, 'utf8'));
+  if (x && x.scenarios) x = x.scenarios;
+  if (!Array.isArray(x)) x = [x];
+  return { file: hit, scenarios: x };
+}
+
+module.exports = { ROOT, DEFAULT_BAS_DIR, DEFAULT_HMI_DIR, findFiles, detectAutorun, loadProject, loadProjectScenarios, makeSim };

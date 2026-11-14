@@ -1,6 +1,6 @@
 {
   "name": "trio-hmi-visualizer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Browser HMI visualizer + headless simulator for Trio Motion controllers.",
   "license": "MIT",
