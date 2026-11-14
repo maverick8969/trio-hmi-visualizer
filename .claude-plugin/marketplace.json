@@ -11,7 +11,7 @@
       "name": "trio-sim",
       "source": "./",
       "description": "Headless Trio controller simulator + HMI visualizer: run .BAS programs, check VR outputs, diff behavior, screenshot the HMI.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }

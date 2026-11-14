@@ -1,6 +1,6 @@
 ---
 name: trio-sim
-description: Boot and drive the Trio Motion controller simulator headlessly against real TrioBASIC (.BAS) programs, then read and assert on VR registers, I/O, axes, heaters, flows and the Modbus KPI block. Use when changing or reviewing .BAS code for the Novex Line 2 (or any Trio) controller, to check VR outputs, run the regression scenarios, compare behavior before/after a change, or reproduce an interlock / E-stop / boot problem — without hardware.
+description: Boot and drive the Trio Motion controller simulator headlessly against real TrioBASIC (.BAS) programs, then read and assert on VR registers, I/O, axes, heaters, flows and the Modbus KPI block. Use when changing or reviewing .BAS code for a Trio controller project (such as the Line 2 controller repo), to check VR outputs, run the regression scenarios, compare behavior before/after a change, or reproduce an interlock / E-stop / boot problem — without hardware.
 ---
 
 # Trio simulator (headless)
@@ -27,7 +27,7 @@ Run `node "$TRIO/tools/trio-sim.js" --help` for the full option list.
 
 Always pass `--bas <dir>` with the folder holding the `.BAS` files you are working on (e.g. `--bas .`
 from the controller repo root; subfolders are searched). Without `--bas` it runs the bundled
-`samples/line2` snapshot, which may be stale. Autorun is taken from `manifest.json`, else the
+synthetic demo (`samples/demo`), not your machine. Autorun is taken from `manifest.json`, else the
 `.mpv3prj` `IsAutorun` entry, else `START_AND_SET_VARIABLES`; override with `--autorun NAME`.
 
 ## Core workflow
@@ -40,7 +40,8 @@ T="node $TRIO/tools/trio-sim.js --bas ."
 # 1. Syntax check after editing any .BAS (exit 1 on parse errors)
 $T --parse-only
 
-# 2. Full regression suite (exit 1 if any assertion fails)
+# 2. The project's regression suite, <--bas>/sim/scenarios.json (exit 1 if any assertion fails,
+#    exit 2 if the project has no sim/scenarios.json)
 $T --scenario all --log warn
 
 # 3. Boot healthy? WDOG=1 and SYSTEMSTATUS (VR 24) = 0x28 (40)
@@ -90,9 +91,10 @@ For repeatable checks, write a JSON file and run it with `--scenario path.json`:
 ]}]
 ```
 
-Step types: `boot`, `fastforward`, `run`, `set`, `setBit`, `estop`, `fault`, `expect`, `log`. Built-ins live in
-`$TRIO/js/sim/sim-scenarios.js` (`--list-scenarios`). Suggest keeping project scenarios in the controller repo
-(e.g. `sim/scenarios.json`) and running them on every change.
+Step types: `boot`, `fastforward`, `run`, `set`, `setBit`, `estop`, `fault`, `expect`, `log`. There are no
+built-in scenarios: `--scenario all`, `--scenario <name substring>` and `--list-scenarios` use the project's
+`sim/scenarios.json` (found under `--bas`). Keep the controller repo's scenarios there and run them on every
+change; add a scenario when you fix a bug.
 
 ## Reading results
 

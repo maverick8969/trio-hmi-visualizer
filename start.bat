@@ -21,6 +21,6 @@ where npx    >nul 2>nul && ( npx --yes serve -l %PORT% .  & goto :eof )
 
 echo.
 echo No Python or Node found to run a local server.
-echo You can still open index.html directly in your browser and use the
-echo "Load Folder" button to pick the samples\line2 folder manually.
+echo You can still open index.html directly in your browser; in the Simulator use
+echo "Load .BAS..." to pick your project's files (the bundled demo is in samples\demo).
 pause

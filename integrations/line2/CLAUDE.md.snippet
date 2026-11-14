@@ -6,7 +6,7 @@ This repo's `.BAS` programs run on a headless simulator provided by the `trio-si
 
 After changing any `.BAS` file:
 1. `--parse-only` must report 0 parse errors.
-2. `--scenario all` (built-ins) and `--scenario sim/scenarios.json` (this repo's scenarios, if present) must pass.
+2. `--scenario all` (this repo's `sim/scenarios.json`) must pass.
 3. For behavior changes, snapshot the VR outputs on the base commit and `--diff` against your change with
    the same inputs. List every changed VR/global in your summary and say whether it was intended.
 4. If an operator-visible value changed, run `hmi-shot` on the affected HMI page(s) and look at the PNGs.

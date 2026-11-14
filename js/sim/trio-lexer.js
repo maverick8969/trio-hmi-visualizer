@@ -1,8 +1,8 @@
 // ============================================================
 // trio-lexer.js — Tokenizer for the TrioBASIC dialect
 // ------------------------------------------------------------
-// Handles the subset of TrioBASIC used by the Novex Line 2
-// project: ' comments, `_` line continuation, labels, string /
+// Handles the subset of TrioBASIC used by real Trio controller
+// projects: ' comments, `_` line continuation, labels, string /
 // number / $hex literals, GLOBAL/CONSTANT/DIM, block + inline
 // IF, FOR/NEXT, WHILE/WEND, REPEAT/UNTIL, GOTO/GOSUB/RETURN,
 // WAIT, ON BASICERROR, AND/OR/NOT/XOR/MOD word-operators,

@@ -1,0 +1,80 @@
+[
+  {
+    "name": "Boot: watchdog on, defaults loaded",
+    "steps": [
+      { "boot": true }, { "run": 1000 },
+      { "expect": { "what": "wdog", "op": "=", "value": 1 } },
+      { "expect": { "what": "speed_sp", "op": "=", "value": 50 } },
+      { "expect": { "what": "batch_size", "op": "=", "value": 20 } },
+      { "expect": { "what": "bit:11.0", "op": "=", "value": 0 } }
+    ]
+  },
+  {
+    "name": "START latches RUNNING and ramps speed to setpoint",
+    "steps": [
+      { "boot": true }, { "run": 1000 },
+      { "setBit": { "name": "cmd_word", "bit": 0, "value": 1 } }, { "run": 3000 },
+      { "expect": { "what": "bit:11.0", "op": "=", "value": 1 } },
+      { "expect": { "what": "bit:10.0", "op": "=", "value": 0 } },
+      { "expect": { "what": "speed_actual", "op": "~", "value": 50, "tol": 1 } },
+      { "expect": { "what": "part_count", "op": ">=", "value": 2 } }
+    ]
+  },
+  {
+    "name": "STOP clears RUNNING and speed coasts to zero",
+    "steps": [
+      { "boot": true }, { "run": 1000 },
+      { "setBit": { "name": "cmd_word", "bit": 0, "value": 1 } }, { "run": 2000 },
+      { "setBit": { "name": "cmd_word", "bit": 1, "value": 1 } }, { "run": 2000 },
+      { "expect": { "what": "bit:11.0", "op": "=", "value": 0 } },
+      { "expect": { "what": "speed_actual", "op": "=", "value": 0 } }
+    ]
+  },
+  {
+    "name": "Drive fault stops the cell, START refused until RESET",
+    "steps": [
+      { "boot": true }, { "run": 1000 },
+      { "setBit": { "name": "cmd_word", "bit": 0, "value": 1 } }, { "run": 1000 },
+      { "setBit": { "name": "alarm_word", "bit": 0, "value": 1 } }, { "run": 500 },
+      { "expect": { "what": "bit:11.1", "op": "=", "value": 1 } },
+      { "expect": { "what": "bit:11.0", "op": "=", "value": 0 } },
+      { "setBit": { "name": "cmd_word", "bit": 0, "value": 1 } }, { "run": 500 },
+      { "expect": { "what": "bit:11.0", "op": "=", "value": 0 } },
+      { "setBit": { "name": "cmd_word", "bit": 2, "value": 1 } }, { "run": 500 },
+      { "expect": { "what": "bit:11.1", "op": "=", "value": 0 } },
+      { "expect": { "what": "part_count", "op": "=", "value": 0 } },
+      { "setBit": { "name": "cmd_word", "bit": 0, "value": 1 } }, { "run": 500 },
+      { "expect": { "what": "bit:11.0", "op": "=", "value": 1 } }
+    ]
+  },
+  {
+    "name": "Batch complete stops unless auto-restart is on",
+    "steps": [
+      { "boot": true }, { "run": 1000 },
+      { "set": { "batch_size": 3 } },
+      { "setBit": { "name": "cmd_word", "bit": 0, "value": 1 } }, { "run": 4500 },
+      { "expect": { "what": "bit:11.0", "op": "=", "value": 0 } },
+      { "expect": { "what": "part_count", "op": "=", "value": 3 } },
+      { "setBit": { "name": "options_word", "bit": 2, "value": 1 } },
+      { "setBit": { "name": "cmd_word", "bit": 0, "value": 1 } }, { "run": 4500 },
+      { "expect": { "what": "bit:11.0", "op": "=", "value": 1 } },
+      { "expect": { "what": "part_count", "op": "<", "value": 3 } }
+    ]
+  },
+  {
+    "name": "Jog moves only while stopped; HOME zeroes and sets HOMED",
+    "steps": [
+      { "boot": true }, { "run": 1000 },
+      { "setBit": { "name": "jog_word", "bit": 0, "value": 1 } }, { "run": 1000 },
+      { "setBit": { "name": "jog_word", "bit": 0, "value": 0 } },
+      { "expect": { "what": "position", "op": "~", "value": 10, "tol": 0.6 } },
+      { "setBit": { "name": "jog_word", "bit": 2, "value": 1 } }, { "run": 200 },
+      { "expect": { "what": "position", "op": "=", "value": 0 } },
+      { "expect": { "what": "bit:11.2", "op": "=", "value": 1 } },
+      { "set": { "speed_sp": 0 } },
+      { "setBit": { "name": "cmd_word", "bit": 0, "value": 1 } }, { "run": 200 },
+      { "setBit": { "name": "jog_word", "bit": 1, "value": 1 } }, { "run": 1000 },
+      { "expect": { "what": "position", "op": "=", "value": 0 } }
+    ]
+  }
+]

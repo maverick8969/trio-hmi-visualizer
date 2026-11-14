@@ -35,7 +35,7 @@ Open `index.html` in any modern browser, or run `./start.sh`.
 The simulator also runs without a browser, which is useful for CI and AI agents:
 
 ```bash
-node tools/trio-sim.js --bas path/to/line2 --scenario all          # regression scenarios
+node tools/trio-sim.js --bas path/to/line2 --scenario all          # the project's sim/scenarios.json
 node tools/trio-sim.js --bas . --fast-boot --set hmi_pumps_run=1 --run 4000 --dump kpi,axes
 node tools/hmi-shot.js --bas . --pages OPERATOR_MAIN --out shots     # HMI screenshots (Playwright)
 npm test                                                             # engine + CLI tests

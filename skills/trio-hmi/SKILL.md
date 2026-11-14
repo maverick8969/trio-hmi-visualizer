@@ -29,7 +29,7 @@ node "$TRIO/tools/hmi-shot.js" --bas . --hmi <folder with .TGM/.TGD/images> \
 - **Look at the PNGs** (open them with your image-reading tool) — don't just report that they were written.
   Compare against expectations: indicators lit, numbers matching the VR values from `trio-sim`.
 
-Without `--hmi` it uses the bundled `samples/line2-hmi` screens.
+Without `--hmi` it uses the bundled demo screens (`samples/demo/hmi`), which only match the demo programs.
 
 ## 2. Interactive (for a human)
 
@@ -39,7 +39,7 @@ cd "$TRIO" && ./start.sh          # Windows: start.bat   (serves http://localhos
 
 Click **◉ Simulator** → **Boot** / **Fast-boot**, then **🖥 Live HMI**. HMI buttons write VRs into the running
 code and the screens animate from the code's outputs. Use **Load .BAS…** to load the controller repo's
-programs instead of the bundled sample. In a cloud session, tell the user the port (and report it if your
+programs (and its `sim/scenarios.json`) instead of the bundled demo. In a cloud session, tell the user the port (and report it if your
 environment has a preview-port tool) rather than trying to open a browser.
 
 ## Editing screens

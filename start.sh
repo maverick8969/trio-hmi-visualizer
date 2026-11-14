@@ -21,6 +21,6 @@ elif command -v python >/dev/null 2>&1; then exec python -m http.server "$PORT"
 elif command -v npx >/dev/null 2>&1; then exec npx --yes serve -l "$PORT" .
 else
   echo "No python3 or node/npx found to run a local server."
-  echo "You can still open index.html directly and use the 'Load Folder' button"
-  echo "to pick the samples/line2 folder manually."
+  echo "You can still open index.html directly; in the Simulator use 'Load .BAS...' to pick"
+  echo "your project's files (the bundled demo is in samples/demo)."
 fi

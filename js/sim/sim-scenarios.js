@@ -97,83 +97,10 @@
     return { name: scn.name, results, failed, passed: results.length - failed, total: results.length };
   }
 
-  // ---- Built-in scenarios (each self-contained: boots fresh) ----
-  const BOOT = [{ boot: true }, { fastforward: 18000 }];
-  const BUILTINS = [
-    {
-      name: 'Boot to operational (0x28)',
-      steps: [...BOOT,
-        { expect: { what: 'wdog', op: '=', value: 1 } },
-        { expect: { what: 'VR:24', op: '=', value: 40 } },
-      ],
-    },
-    {
-      name: 'Pump start ramps to setpoint + flow',
-      steps: [...BOOT,
-        { set: { use_flow_meters: 0, pumpb_mix_ratio: 1, pumpa_rpm_setpoint: 50, hmi_pumps_run: 1 } },
-        { run: 4000 },
-        { expect: { what: 'axis:1:MTYPE', op: '!=', value: 0 } },
-        { expect: { what: 'axis:1:MSPEED', op: '~', value: 50, tol: 6 } },
-        { expect: { what: 'flow:pumpA', op: '>', value: 0 } },
-      ],
-    },
-    {
-      name: 'E-stop → drives safe, then recover to 0x28',
-      steps: [...BOOT,
-        { set: { pumpa_rpm_setpoint: 50, hmi_pumps_run: 1 } }, { run: 3000 },
-        { expect: { what: 'axis:1:MTYPE', op: '!=', value: 0 } },
-        { estop: true }, { run: 600 },
-        { expect: { what: 'wdog', op: '=', value: 0 } },
-        { expect: { what: 'bit:24.0', op: '=', value: 1 } },
-        { expect: { what: 'axis:1:MTYPE', op: '=', value: 0 } },
-        { expect: { what: 'hmi_pumps_run', op: '=', value: 0 } },
-        { estop: false }, { set: { safety_relay_reset: 1 } }, { run: 5000 },
-        { expect: { what: 'wdog', op: '=', value: 1 } },
-        { expect: { what: 'VR:24', op: '=', value: 40 } },
-      ],
-    },
-    {
-      name: 'Heater deadband energizes below setpoint',
-      steps: [...BOOT,
-        { set: { heat_on_time: 3, heat_off_time: 3, overhead_zone1_offon_sp: 300, overhead_zone1_upper_db: 5, overhead_zone1_lower_db: -5, overhead_zone1_on: 1 } },
-        { run: 6000 },
-        { expect: { what: 'op:20', op: '=', value: 1 } },
-        { expect: { what: 'temp:overhead1', op: '>', value: 90 } },
-      ],
-    },
-    {
-      name: 'Mixer VFD spins spindle + reads back speed',
-      steps: [...BOOT,
-        { set: { mixer_head_speed_sp: 8000, mixer_head_init_lube_count: 0 } },
-        { setBit: { name: 'triocontrolword_vr', bit: 1, value: 1 } },   // auto
-        { setBit: { name: 'mixer_controlword_vr', bit: 4, value: 1 } }, // run
-        { run: 3000 },
-        { expect: { what: 'op:0', op: '=', value: 1 } },
-        { expect: { what: 'axis:5:MSPEED', op: '>', value: 6000 } },
-        { expect: { what: 'mixer_reference_speed', op: '~', value: 8000, tol: 700 } },
-      ],
-    },
-    {
-      name: 'Recipe select loads working setpoints',
-      steps: [...BOOT,
-        { expect: { what: 'pumpa_rpm_setpoint', op: '=', value: 40 } },   // recipe 0 auto-loads at boot
-        { set: { reciperowindex: 1 } }, { run: 1500 },
-        { expect: { what: 'pumpa_rpm_setpoint', op: '=', value: 60 } },
-        { expect: { what: 'traverse_speed_setpt', op: '=', value: 35 } },
-        { expect: { what: 'zone_control_enable', op: '=', value: 1 } },
-      ],
-    },
-    {
-      name: 'KPI share block + end-shift gate (bitwise mask)',
-      steps: [...BOOT,
-        { expect: { what: 'VR:4017', op: '=', value: 40 } },   // Share_SystemStatus mirror
-        { expect: { what: 'VR:4058', op: '=', value: 1 } },    // idle -> END SHIFT button visible
-        { set: { hmi_pumps_run: 1 } }, { run: 3000 },
-        { expect: { what: 'bit:4000.2', op: '=', value: 1 } }, // pump A bit set in line_state
-        { expect: { what: 'VR:4058', op: '=', value: 0 } },    // running -> hidden (mask != 0)
-      ],
-    },
-  ];
+  // Machine-specific regression scenarios live with each project, in
+  // <project>/sim/scenarios.json (an array of { name, steps }). The CLI and the
+  // browser dashboard load that file; nothing machine-specific is built in.
+  const BUILTINS = [];
 
   return { runScenario, resolveWhat, compare, BUILTINS };
 });

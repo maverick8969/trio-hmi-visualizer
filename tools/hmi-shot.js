@@ -20,8 +20,8 @@ const HELP = `hmi-shot — screenshot the live HMI driven by the Trio simulator
 
 Usage: node tools/hmi-shot.js [options]
 
-  --bas <dir>          .BAS programs (default samples/line2). Searched recursively.
-  --hmi <dir>          Folder with the .TGM + .TGD screens + images (default samples/line2-hmi).
+  --bas <dir>          .BAS programs (default samples/demo, a synthetic demo). Searched recursively.
+  --hmi <dir>          Folder with the .TGM + .TGD screens + images (default samples/demo/hmi).
   --tgm <file.TGM>     Which TGM to load if the folder has several.
   --autorun <NAME>     Override autorun program.
   --pages <a,b|all>    Pages to capture (default: all pages in the TGM).
