@@ -30,6 +30,28 @@ Open `index.html` in any modern browser, or run `./start.sh`.
 4. Use the **VR Simulation** panel to change register values and see bindings update live
 5. Click **Export TGD** to download the modified screen file
 
+## Headless simulator & Claude Code plugin
+
+The simulator also runs without a browser, which is useful for CI and AI agents:
+
+```bash
+node tools/trio-sim.js --bas path/to/line2 --scenario all          # regression scenarios
+node tools/trio-sim.js --bas . --fast-boot --set hmi_pumps_run=1 --run 4000 --dump kpi,axes
+node tools/hmi-shot.js --bas . --pages OPERATOR_MAIN --out shots     # HMI screenshots (Playwright)
+npm test                                                             # engine + CLI tests
+```
+
+This repo is also a Claude Code plugin marketplace that provides the `trio-sim` and `trio-hmi` skills.
+To install it in Claude Code:
+
+```
+/plugin install trio-sim --marketplace maverick8969/trio-hmi-visualizer
+```
+
+(or `/plugin marketplace add maverick8969/trio-hmi-visualizer` then `/plugin install trio-sim@trio-tools`).
+To enable it automatically for everyone working in another repo, such as the Line 2 controller repo, see
+[`integrations/line2/`](integrations/line2/README.md).
+
 ## Claude Code skill: generate HMI screens
 
 `skills/trio-hmi-screens/` is a portable [Claude Code skill](https://code.claude.com/docs/en/skills) that lets Claude design Trio HMI screens in any repository. From a short JSON spec it generates:
@@ -38,7 +60,7 @@ Open `index.html` in any modern browser, or run `./start.sh`.
 - `preview.html` — a single-file simulator (same rendering engine as this visualizer) with working buttons, hold-to-run jog, keypad entry, page navigation, a live VR panel and simulated controller rules,
 - `VR_MAP.md` — every VR the HMI reads and writes, for the controller programmer.
 
-**Install in another repo:** copy the folder to `<repo>/.claude/skills/trio-hmi-screens/` (or `~/.claude/skills/` for all projects), then ask Claude e.g. *"make a Trio HMI with a run page, jog page and recipe setup"*.
+**Install in another repo:** it ships with the `trio-sim` plugin above (skills under `skills/` are picked up automatically), or copy the folder to `<repo>/.claude/skills/trio-hmi-screens/` (or `~/.claude/skills/` for all projects). Then ask Claude e.g. *"make a Trio HMI with a run page, jog page and recipe setup"*.
 
 **Use without Claude:**
 
