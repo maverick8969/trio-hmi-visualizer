@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "trio-tools": {
+      "source": {
+        "source": "github",
+        "repo": "maverick8969/trio-hmi-visualizer",
+        "ref": "v0.1.0"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "trio-sim@trio-tools": true
+  }
+}

@@ -109,6 +109,7 @@ body { font-family: "Segoe UI", Arial, sans-serif; background: #1e1e2e; color: #
 #drop-zone { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(137,180,250,0.15); border: 3px dashed #89b4fa; display: none; align-items: center; justify-content: center; z-index: 9999; font-size: 24px; color: #89b4fa; pointer-events: none; }
 #drop-zone.visible { display: flex; }
 </style>
+<link rel="stylesheet" href="js/sim/sim.css">
 </head>
 <body>
 
@@ -229,5 +230,15 @@ body { font-family: "Segoe UI", Arial, sans-serif; background: #1e1e2e; color: #
 <script src="js/editor.js"></script>
 <script src="js/serializer.js"></script>
 <script src="js/app.js"></script>
+
+<!-- Trio simulator engine + dashboard -->
+<script src="js/sim/trio-lexer.js"></script>
+<script src="js/sim/trio-parser.js"></script>
+<script src="js/sim/trio-runtime.js"></script>
+<script src="js/sim/trio-machine.js"></script>
+<script src="js/sim/trio-plant.js"></script>
+<script src="js/sim/sim-controller.js"></script>
+<script src="js/sim/sim-scenarios.js"></script>
+<script src="js/sim/sim-ui.js"></script>
 </body>
 </html>

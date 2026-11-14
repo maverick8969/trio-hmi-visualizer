@@ -1,0 +1,16 @@
+## Simulator verification (trio-sim plugin)
+
+This repo's `.BAS` programs run on a headless simulator provided by the `trio-sim` plugin
+(marketplace `trio-tools`, repo `maverick8969/trio-hmi-visualizer`). Use the `trio-sim` and
+`trio-hmi` skills. Always pass `--bas .` so the simulator runs the code in this checkout.
+
+After changing any `.BAS` file:
+1. `--parse-only` must report 0 parse errors.
+2. `--scenario all` (built-ins) and `--scenario sim/scenarios.json` (this repo's scenarios, if present) must pass.
+3. For behavior changes, snapshot the VR outputs on the base commit and `--diff` against your change with
+   the same inputs. List every changed VR/global in your summary and say whether it was intended.
+4. If an operator-visible value changed, run `hmi-shot` on the affected HMI page(s) and look at the PNGs.
+
+Never claim a change is verified on the sim without quoting the command and its pass/fail result.
+Plant physics are illustrative — the sim verifies logic, sequencing, interlocks and VR values, not
+real temperatures, flows or ramp times.
